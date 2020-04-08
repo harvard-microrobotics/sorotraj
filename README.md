@@ -7,10 +7,17 @@ Generate trajectories for soft robots from yaml files (accompanies the Ctrl-P pr
 3. `pip install .`
 
 ## Usage
+
+### Minimal Example
 ``` python
-import soro_traj
+import sorotraj
 
-# Check out the "examples" folder for examples
+file_to_use = 'traj_setup/setpoint_traj_demo'
+
+build = sorotraj.TrajBuilder()
+build.load_traj_def(file_to_use)
+traj = build.get_trajectory()
+print(traj)
 ```
-
+**Check out the _examples_ folder for more detailed usage examples**
 
