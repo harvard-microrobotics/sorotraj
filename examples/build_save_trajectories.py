@@ -4,7 +4,7 @@ import os
 setup_location = 'traj_setup'
 build_location = 'traj_built'
 
-files_to_use = ['waveform_traj_demo','simple_setpoint','setpoint_traj_demo']
+files_to_use = ['waveform_traj_demo','interp_setpoint','setpoint_traj_demo']
 
 traj = sorotraj.TrajBuilder()
 for file in files_to_use:

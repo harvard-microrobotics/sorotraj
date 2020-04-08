@@ -21,3 +21,10 @@ print(traj)
 ```
 **Check out the _examples_ folder for more detailed usage examples**
 
+
+## Details:
+
+There are currently two types of trajectories
+
+
+### Waveform Trajectories

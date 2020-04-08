@@ -1,6 +1,6 @@
 # Top-level settings
 settings:
-    traj_type: 'waveform'  # Types include: 'waveform', 'interp'
+    traj_type: 'waveform'  # Types include: 'waveform', 'interp', 'direct'
 
 
 # Place all of the type-specific settings in here

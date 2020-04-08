@@ -68,13 +68,20 @@ class TrajBuilder:
     # Generate the trajectory based on the file definition
     def go(self):
         if self.traj_type == "waveform":
-            self.do_waveform()
+            success = self.do_waveform()
         elif self.traj_type == "interp":
-            self.do_interp()
+            success = self.do_interp()
+        elif self.traj_type == "direct":
+            success = self.do_direct()
         elif self.traj_type == "none":
-            self.do_none()
+            success = self.do_none()
         else:
             print('Please give your trajectory a valid type')
+            success = False
+
+        if success:
+            self.plot_traj()
+            print("Trajectory has %d lines"%(len(self.full_trajectory['setpoints'] )))
 
 
 
@@ -169,7 +176,7 @@ class TrajBuilder:
             traj = np.append(traj, traj[0])
 
         else:
-            return
+            return False
 
 
         #Stick everything together
@@ -186,18 +193,39 @@ class TrajBuilder:
         self.full_trajectory['suffix'] = suffix
         self.full_trajectory['setpoints']   = out_traj_whole.tolist()
 
-        self.plot_traj()
+        return True
 
-        print("Trajectory has %d lines"%(out_traj_whole.shape[0]))
 
         
-    # Generate an interpolation trajectory
-    def do_interp(self):
+    # Generate a direct trajectory straight from the setpoint list given
+    def do_direct(self):
         setpts = self.config.get("setpoints",None)
         traj_setpoints = setpts.get("main",  None)
         prefix = setpts.get("prefix",None)
         suffix = setpts.get("suffix",None)
         interp_type = str(self.config.get("interp_type"))
+
+            
+        self.full_trajectory = {}
+        self.full_trajectory['prefix'] = prefix
+        self.full_trajectory['suffix'] = suffix
+        self.full_trajectory['setpoints']   = traj_setpoints
+
+        return True
+
+
+    # Generate an interpolation trajectory
+    def do_interp(self):
+        interp_type = str(self.config.get("interp_type"))
+        if interp_type == "none":
+            return self.do_direct()
+
+
+        setpts = self.config.get("setpoints",None)
+        traj_setpoints = setpts.get("main",  None)
+        prefix = setpts.get("prefix",None)
+        suffix = setpts.get("suffix",None)
+        
 
 
         if interp_type == "linear":
@@ -231,8 +259,8 @@ class TrajBuilder:
             allOut = np.insert(traj,0, t_intermediate ,axis = 1)
             allOut = allOut.tolist()
 
-            plt.plot(times,pres,'o')
             plt.plot(t_intermediate,traj)
+            plt.plot(times,pres,'ok')
             plt.show()
 
         else:
@@ -244,14 +272,12 @@ class TrajBuilder:
         self.full_trajectory['suffix'] = suffix
         self.full_trajectory['setpoints']   = allOut
 
-        self.plot_traj()
-
-        print("Trajectory has %d lines"%(len(allOut)))
+        return True
 
 
     # Do nothing if the trajectory type is not supported
     def do_none(self):
-        pass
+        return True
 
 
     # Pass out the built trajectory
