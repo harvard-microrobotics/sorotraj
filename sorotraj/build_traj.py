@@ -15,9 +15,10 @@ out_folder  = "traj_built"
 
 
 class TrajBuilder:
-    def __init__(self):
+    def __init__(self, graph=True):
         self.filename = None
         self.full_trajectory = None
+        self.graph = graph
 
 
     # Load the trajectory definition from a file
@@ -79,7 +80,7 @@ class TrajBuilder:
             print('Please give your trajectory a valid type')
             success = False
 
-        if success:
+        if success and self.graph:
             self.plot_traj()
             print("Trajectory has %d lines"%(len(self.full_trajectory['setpoints'] )))
 
@@ -259,9 +260,10 @@ class TrajBuilder:
             allOut = np.insert(traj,0, t_intermediate ,axis = 1)
             allOut = allOut.tolist()
 
-            plt.plot(t_intermediate,traj)
-            plt.plot(times,pres,'ok')
-            plt.show()
+            if self.graph:
+                plt.plot(t_intermediate,traj)
+                plt.plot(times,pres,'ok')
+                plt.show()
 
         else:
             allOut = traj_setpoints
