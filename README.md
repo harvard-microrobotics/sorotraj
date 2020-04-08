@@ -2,7 +2,11 @@
 Generate trajectories for soft robots from yaml files (accompanies the Ctrl-P project)
 
 ## Installation
-1. Download the package
+### Install the release version
+[This package is on pypi](https://pypi.org/project/sorotraj/), so anyone can install it with pip: `pip install sorotraj`
+
+### Install the most-recent development version
+1. Clone the package from the this repo
 2. Navigate into the main folder
 3. `pip install .`
 
