@@ -22,6 +22,8 @@ class TrajBuilder:
 
     # Load the trajectory definition from a file
     def load_traj_def(self, filename):
+        filename=filename.replace('.yaml','')
+
         self.filename = os.path.abspath(filename+'.yaml').replace('.yaml','')
 
         # Read in the setpoint file
