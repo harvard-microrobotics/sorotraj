@@ -5,8 +5,8 @@ settings:
 
 # Place all of the type-specific settings in here
 config:
-    interp_type: none   # can be: 'linear', 'cubic'
-    setpoints: # Setpoints are only used if you are doing an interpolation
+    interp_type: none   # Types include: 'linear', 'cubic', 'none'
+    setpoints:
         # [time, finger1, finger2, n/c, n/c]
         main:
             - [0.0,   0, 0, 0,  0]

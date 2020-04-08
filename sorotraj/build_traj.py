@@ -22,16 +22,15 @@ class TrajBuilder:
 
     # Load the trajectory definition from a file
     def load_traj_def(self, filename):
-        if filename[-4:] is not 'yaml':
-            print('Please provide a yaml file')
-
-        self.filename = os.path.abspath(filename)
+        self.filename = os.path.abspath(filename+'.yaml').replace('.yaml','')
 
         # Read in the setpoint file
-        with open(filename) as f:
+        with open(filename+'.yaml') as f:
             # use safe_load instead of load
             inStuff = yaml.safe_load(f)
             f.close()
+
+        print('Trajectory Loaded: %s'%(filename+'.yaml'))
 
         self.settings = inStuff.get("settings",None)
         self.config = inStuff.get("config",None)
@@ -44,30 +43,24 @@ class TrajBuilder:
 
 
     # Save yaml files of trajectories generated.
-    def save_traj(self, outTraj, filename=None, prefix=None, suffix=None):
-        outDict = {}
-        outDict['setpoints']= outTraj
-
-        if prefix is not None:
-            outDict['prefix'] = prefix
-
-        if suffix is not None:
-            outDict['suffix'] = suffix
-
+    def save_traj(self, filename=None):
+        
         if filename is None:
             if self.filename is None:
                 print('You need to get trajectory settings before you can save')
                 return
             else:
-                filename=self.filename.replace(".yaml",".traj")
+                filename=self.filename
 
 
-        dirname = os.path.dirname(filename)
+        dirname = os.path.dirname(filename+".traj")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        with open(filename, 'w') as f:
-            yaml.dump(outDict, f, default_flow_style=None)
+        with open(filename+".traj", 'w') as f:
+            yaml.dump(self.full_trajectory, f, default_flow_style=None)
+        
+        print('Trajectory Saved: %s'%(filename+".traj"))
 
 
     # Generate the trajectory based on the file definition
@@ -107,7 +100,7 @@ class TrajBuilder:
 
 
         channels =  self.config.get("channels")
-        num_cycles = float(self.config.get("num_cycles"))
+        num_cycles = int(self.config.get("num_cycles"))
 
         press_amp = (press_max-press_min)/2.0 *channels
         press_off = (press_max+press_min)/2.0 * channels
@@ -150,7 +143,7 @@ class TrajBuilder:
             traj = -np.cos(2.0*np.pi * freq*time_samp)
 
         elif waveform_type == "triangle":
-            time_samp = np.linspace(0,num_cycles/freq, num_cycles*2.0 +1)
+            time_samp = np.linspace(0,num_cycles/freq, num_cycles*2 +1)
             traj = np.array([-1,1])
             traj = np.tile(traj,int(num_cycles))
             traj = np.append(traj, traj[0])
@@ -325,8 +318,8 @@ class TrajBuilder:
 if __name__ == '__main__':
     if len(sys.argv)==2:
 
-        in_file = os.path.join(traj_folder,sys.argv[1]+'.yaml')
-        out_file = os.path.join(out_folder,sys.argv[1]+'.traj')
+        in_file = os.path.join(traj_folder,sys.argv[1])
+        out_file = os.path.join(out_folder,sys.argv[1])
         build = TrajBuilder()
         build.load_traj_def(in_file)
         build.save_traj(out_file)
