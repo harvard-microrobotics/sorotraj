@@ -29,7 +29,7 @@ class Interpolator:
                         'values': main[:,1:]  }
 
 
-    def get_interp_function(self, num_reps=1, as_array=False):
+    def get_interp_function(self, num_reps=1, as_array=False, invert_direction=False):
         if num_reps<1:
             raise ValueError("The number of reps must be greater than 0")
 
@@ -56,6 +56,9 @@ class Interpolator:
 
         values = np.insert(values, range(self.prefix['values'].shape[0]), self.prefix['values'], axis=0)
         values = np.append(values, self.suffix['values'], axis=0)
+
+        if invert_direction:
+            values = -values
 
         # Make an the interpolation function
         if as_array:
