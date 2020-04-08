@@ -1,4 +1,4 @@
-# soro_traj
+# sorotraj
 Generate trajectories for soft robots from yaml files (accompanies the Ctrl-P project)
 
 ## Installation
