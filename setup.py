@@ -7,7 +7,7 @@ setup(
     license='MIT',
     description='Generate trajectories for soft robots from a file',
     long_description=open('README.md').read(),
-    install_requires=['numpy','scipy', 'matplotlib', 'numbers', 'yaml'],
+    install_requires=['numpy','scipy', 'matplotlib', 'pyyaml'],
     url='https://github.com/cbteeple/soro-traj',
     author='Clark Teeple',
     author_email='cbteeple@gmail.com',

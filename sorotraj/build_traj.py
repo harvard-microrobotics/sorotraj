@@ -4,7 +4,6 @@ import numpy as np
 from scipy.interpolate import CubicSpline, interp1d
 import scipy.signal as signal
 import matplotlib.pyplot as plt
-import numbers
 import yaml
 import sys
 import os
@@ -89,12 +88,12 @@ class TrajBuilder:
         freq_in = self.config.get("waveform_freq")
 
         # Convert the frequency to floats
-        if isinstance(freq_in, numbers.Number):
-            freq = float(freq_in)
-        elif isinstance(freq_in, list):
+        if isinstance(freq_in, list):
             freq = []
             for item in freq_in:
                 freq.append(float(item))
+        else:
+            freq = float(freq_in)
 
 
         press_max = np.array(self.config.get("waveform_max"))
