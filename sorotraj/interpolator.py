@@ -29,9 +29,12 @@ class Interpolator:
                         'values': main[:,1:]  }
 
 
-    def get_interp_function(self, num_reps=1, as_array=False, invert_direction=False):
+    def get_interp_function(self, num_reps=1, speed_factor = 1.0, as_array=False, invert_direction=False):
         if num_reps<1:
             raise ValueError("The number of reps must be greater than 0")
+
+        if speed_factor<=0:
+            raise ValueError("The speed factor must be greater than 0")
 
         num_reps = int(num_reps)
         
@@ -66,9 +69,9 @@ class Interpolator:
             num_channels = values.shape[1]
             self.interp_fun = []
             for idx in range(num_channels):
-                self.interp_fun.append(interp1d(times,values[:,idx],bounds_error=False,fill_value=values[-1,idx], axis=0))
+                self.interp_fun.append(interp1d(times/speed_factor,values[:,idx],bounds_error=False,fill_value=values[-1,idx], axis=0))
         else:
             # Make one function returning an array of channel values
-            self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
+            self.interp_fun = interp1d(times/speed_factor,values,bounds_error=False,fill_value=values[-1,:], axis=0)
 
         return self.interp_fun
