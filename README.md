@@ -101,5 +101,5 @@ actuation_fn = interp.get_interp_function(
     - Must be positive, nonzero
 - **invert_direction**: (`bool`, default=False) Negate the whole trajectory (useful if actuators have different directionalities)
     - (`bool`): Negate all channels
-    - (`list of bools`): Choose which channels to negate
+    - (`list of ints`): Choose which channels to negate with a list of channel indices
 - **as_list**: (`bool`, default=False) get the interpolation function as a list of 1D functions (one for each channel) rather than a single 2D interpolation
