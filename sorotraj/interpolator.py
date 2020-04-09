@@ -10,6 +10,7 @@ import os
 class Interpolator:
     def __init__(self, trajectory):
         self.import_traj(trajectory)
+        self.final_time = None
 
 
     # Import the trajectory and parse it for interpolation
@@ -29,6 +30,7 @@ class Interpolator:
                         'values': main[:,1:]  }
 
 
+    # Generate an interpolation function based on the trajectory
     def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
         if num_reps<1:
             raise ValueError("The number of reps must be greater than 0")
@@ -61,7 +63,11 @@ class Interpolator:
         values = np.insert(values, range(self.prefix['values'].shape[0]), self.prefix['values'], axis=0)
         values = np.append(values, self.suffix['values'], axis=0)
 
-        if invert_direction:
+        self.final_time = times[-1]
+
+        if isinstance(invert_direction,list):
+            values[:,invert_direction] = -values[:,invert_direction]
+        elif invert_direction == True:
             values = -values
 
         # Make an the interpolation function
@@ -76,3 +82,8 @@ class Interpolator:
             self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
 
         return self.interp_fun
+
+
+    # Get the final time of the interpolation
+    def get_final_time(self):
+        return self.final_time
