@@ -47,6 +47,7 @@ class Interpolator:
             new_times=time_use + idx*time_use[-1]
             times[idx*len_traj: (idx+1)*len_traj]= new_times
         times = np.insert(times, 0, self.main['time'][0])
+        times = times/speed_factor
 
         # Duplicate the values
         values = np.tile(self.main['values'][1:,:],(num_reps,1))
@@ -69,9 +70,9 @@ class Interpolator:
             num_channels = values.shape[1]
             self.interp_fun = []
             for idx in range(num_channels):
-                self.interp_fun.append(interp1d(times/speed_factor,values[:,idx],bounds_error=False,fill_value=values[-1,idx], axis=0))
+                self.interp_fun.append(interp1d(times,values[:,idx],bounds_error=False,fill_value=values[-1,idx], axis=0))
         else:
             # Make one function returning an array of channel values
-            self.interp_fun = interp1d(times/speed_factor,values,bounds_error=False,fill_value=values[-1,:], axis=0)
+            self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
 
         return self.interp_fun
