@@ -29,7 +29,7 @@ class Interpolator:
                         'values': main[:,1:]  }
 
 
-    def get_interp_function(self, num_reps=1, speed_factor = 1.0, as_array=False, invert_direction=False):
+    def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
         if num_reps<1:
             raise ValueError("The number of reps must be greater than 0")
 
@@ -64,7 +64,7 @@ class Interpolator:
             values = -values
 
         # Make an the interpolation function
-        if as_array:
+        if as_list:
             # Make an array of 1D functions, one for each channel
             num_channels = values.shape[1]
             self.interp_fun = []
