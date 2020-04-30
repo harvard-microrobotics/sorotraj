@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='sorotraj',
-    version='0.9',
+    version='0.10',
     packages=find_packages(exclude=['tests*']),
     license='MIT',
     description='Generate trajectories for soft robots from a file',
