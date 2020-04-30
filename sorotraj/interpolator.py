@@ -86,12 +86,12 @@ class Interpolator:
     def get_cycle_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
 
 
-        prefix_dur = traj['prefix'][-1][0]
-        suffix_dur = traj['suffix'][-1][0]
-        main_dur = traj['setpoints'][-1][0]
+        prefix_dur = self.prefix['time'][-1]
+        suffix_dur = self.suffix['time'][-1]
+        main_dur = self.main['time'][-1]
         total_main_dur = main_dur/speed_factor*num_reps
 
-        def cycle_fn2(t):
+        def cycle_fn(t):
             if not isinstance(t, list):
                 tl=np.asarray([t])
             else:
@@ -107,9 +107,11 @@ class Interpolator:
                     t_test = t_curr-prefix_dur
                     out.append(np.ceil(num_reps*t_test/total_main_dur)-1)
             
-            if not (isinstance(t, list) or type(t) is numpy.ndarray) :
+            if len(t)==1 :
                 out = out[0]
-            return out.tolist()
+            return out
+
+        return cycle_fn
 
 
     # Get the final time of the interpolation
