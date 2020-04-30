@@ -107,7 +107,7 @@ class Interpolator:
                     t_test = t_curr-prefix_dur
                     out.append(np.ceil(num_reps*t_test/total_main_dur)-1)
             
-            if len(t)==1 :
+            if len(tl)==1 :
                 out = out[0]
             return out
 

@@ -103,3 +103,17 @@ actuation_fn = interp.get_interp_function(
     - (`bool`): Negate all channels
     - (`list of ints`): Choose which channels to negate with a list of channel indices
 - **as_list**: (`bool`, default=False) get the interpolation function as a list of 1D functions (one for each channel) rather than a single 2D interpolation
+
+
+```python
+cycle_fn = interp.get_cycle_function(
+                num_reps=1,
+                speed_factor=1.0,
+                invert_direction=False,
+                as_list=False)
+```
+- Same inputs as `get_interp_function()`, but returns a cycle function (returns the current cycle as a function of time)
+- cycle_fn takes these values:
+    - -2 = Prefix
+    - -1 = Suffix
+    - 0-N = Main loop index

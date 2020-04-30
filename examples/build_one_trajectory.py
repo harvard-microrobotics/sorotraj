@@ -22,6 +22,12 @@ actuation_fn2 = interp.get_interp_function(
                 speed_factor=2.0,
                 invert_direction=[1,3])
 
+cycle_fn = interp.get_cycle_function(
+                num_reps=1,
+                speed_factor=2.0,
+                invert_direction=[1,3])
+
 print("Interpolation at 2.155")
 print(actuation_fn(2.155))
 print(actuation_fn2(2.155))
+print(cycle_fn([0.5, 2.0, 7.0]))
