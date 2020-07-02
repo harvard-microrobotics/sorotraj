@@ -91,7 +91,7 @@ Check out the _build_convert_trajectories.py_ example.
 	- `traj.load_traj_def(file_to_use)`
 3. Convert the trajectory by passing the conversion function
 	- `traj.convert(conversion_function)`
-4. This conversion overwirtes the original trajectory. Now you can save it like normal
+4. This conversion overwrites the original trajectory. Now you can save it like normal
 	- `traj.save_traj(file_to_save)`
 
 
