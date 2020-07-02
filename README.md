@@ -18,10 +18,10 @@ import sorotraj
 
 file_to_use = 'traj_setup/setpoint_traj_demo'
 
-build = sorotraj.TrajBuilder()
-build.load_traj_def(file_to_use)
-traj = build.get_trajectory()
-interp = sorotraj.Interpolator(traj)
+traj = sorotraj.TrajBuilder()
+traj.load_traj_def(file_to_use)
+trajectory = traj.get_trajectory()
+interp = sorotraj.Interpolator(trajectory)
 actuation_fn = interp.get_interp_function(
                 num_reps=1,
                 speed_factor=2.0,
@@ -32,7 +32,7 @@ print(actuation_fn(2.155))
 **Check out the _examples_ folder for more detailed usage examples**
 
 
-## How to Set Up Trajectories:
+## Set Up Trajectories:
 
 Trajectories are made of three parts:
 1. **main**: used in a looping trajectory
@@ -81,7 +81,23 @@ There are currently three types of ways to generate the **main** part of a traje
     	- **num_cycles**: (`int`) The number of cycles of the waveform
     	- **channels**: (`bool`) Flags to turn channels on and off. A list of the form:  `[1,1,0,0]`
 
-## How to use the Interpolator
+## Convert Trajectories Line-by-Line
+Check out the _build_convert_trajectories.py_ example.
+
+1. Set up a conversion function
+	- Inputs: one original trajectory line (`list`)
+	- Outputs: one new trajectory line (`list`)
+2. Load the trajectory like normal
+	- `traj.load_traj_def(file_to_use)`
+3. Convert the trajectory by passing the conversion function
+	- `traj.convert(conversion_function)`
+4. This conversion overwirtes the original trajectory. Now you can save it like normal
+	- `traj.save_traj(file_to_save)`
+
+
+
+
+## Use the Interpolator
 ```python
 interp = sorotraj.Interpolator(trajectory)
 ```
