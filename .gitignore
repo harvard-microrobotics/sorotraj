@@ -1,3 +1,4 @@
+.vscode
 *.spyproject
 *.pyc
 *.egg-info

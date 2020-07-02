@@ -318,6 +318,36 @@ class TrajBuilder:
         return seg.tolist()
 
 
+    # Convert a trajectory using a conversion function
+    def convert(self,conversion_fun):
+        if self.full_trajectory is None:
+            print('No trajectory loaded: Please load a trajectory')
+            return False
+        
+        full_trajectory_new = dict()
+        for traj_segment_key in self.full_trajectory:
+            # If the trajectory segment key is the metadat tag, skip it.
+            if traj_segment_key == 'meta':
+                continue
+
+            traj_segment = self.full_trajectory[traj_segment_key]
+
+            # If the trajectory segment is empty, pass that along
+            if traj_segment is None:
+                full_trajectory_new[traj_segment_key] = None
+                continue
+
+            # If the trajectory has lines, convert them
+            full_trajectory_new[traj_segment_key] = []
+            for line in traj_segment:
+                full_trajectory_new[traj_segment_key].append(conversion_fun(line))
+
+        full_trajectory_new['meta'] = {'converted': True}
+        self.full_trajectory = full_trajectory_new
+        return True
+
+
+
     # Plot the current trajectory 
     def plot_traj(self):
         out_traj_all = np.asarray(self.full_trajectory['setpoints'])
