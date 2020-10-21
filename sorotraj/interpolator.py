@@ -15,12 +15,11 @@ class Interpolator:
 
     # Import the trajectory and parse it for interpolation
     def import_traj(self, trajectory):
-        prefix = np.array(trajectory['prefix'])
-        suffix = np.array(trajectory['suffix'])
-        main   = np.array(trajectory['setpoints'])
-
+        prefix = trajectory['prefix']
+        suffix = trajectory['suffix']
 
         if prefix is not None:
+            prefix = np.array(prefix)
             self.prefix =  {'time' : prefix[:,0]  ,
                             'values': prefix[:,1:]  }
         else:
@@ -28,12 +27,13 @@ class Interpolator:
 
 
         if suffix is not None:
+            suffix = np.array(suffix)
             self.suffix =  {'time' : suffix[:,0]  ,
                             'values': suffix[:,1:]  }
         else:
             self.suffix =  None
 
-
+        main   = np.array(trajectory['setpoints'])
         self.main =    {'time' : main[:,0]  ,
                         'values': main[:,1:]  }
 
@@ -102,7 +102,7 @@ class Interpolator:
         else:
             prefix_dur = 0.0
 
-        if self.suffix is noy None:
+        if self.suffix is not None:
             suffix_dur = self.suffix['time'][-1]
         else:
             suffix_dur = 0.0
