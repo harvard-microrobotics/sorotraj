@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import yaml
 import sys
 import os
+import copy
 
 
 
@@ -35,6 +36,7 @@ class TrajBuilder:
 
         print('Trajectory Loaded: %s'%(filename+'.yaml'))
 
+        self.definition=inStuff
         self.settings = inStuff.get("settings",None)
         self.config = inStuff.get("config",None)
         
@@ -45,9 +47,8 @@ class TrajBuilder:
         self.go()
 
 
-    # Save yaml files of trajectories generated.
-    def save_traj(self, filename=None):
-        
+    # Save yaml files of trajectory definitions.
+    def save_definition(self, filename=None):
         if filename is None:
             if self.filename is None:
                 print('You need to get trajectory settings before you can save')
@@ -55,6 +56,32 @@ class TrajBuilder:
             else:
                 filename=self.filename
 
+        # Get rid of file extension if it exists
+        basename = os.path.splitext(filename)
+        filename = basename[0]
+
+        dirname = os.path.dirname(filename+".yaml")
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        with open(filename+".yaml", 'w') as f:
+            yaml.dump(self.definition, f, default_flow_style=None)
+        
+        print('Trajectory Definition Saved: %s'%(filename+".yaml"))
+
+
+    # Save yaml files of trajectories generated.
+    def save_traj(self, filename=None):
+        if filename is None:
+            if self.filename is None:
+                print('You need to get trajectory settings before you can save')
+                return
+            else:
+                filename=self.filename
+
+        # Get rid of file extension if it exists
+        basename = os.path.splitext(filename)
+        filename = basename[0]
 
         dirname = os.path.dirname(filename+".traj")
         if not os.path.exists(dirname):
@@ -344,6 +371,39 @@ class TrajBuilder:
 
         full_trajectory_new['meta'] = {'converted': True}
         self.full_trajectory = full_trajectory_new
+        return True
+
+
+    # Convert a trajectory definition using a conversion function
+    def convert_definition(self,conversion_fun):
+        if self.definition is None:
+            print('No trajectory loaded: Please load a trajectory')
+            return False
+
+        if self.traj_type == "waveform":
+            print('Cannot convert trajectory of type: "waveform"')
+            return False
+        
+        def_new = copy.deepcopy(self.definition)
+        setpoints=self.definition['config']['setpoints']
+        setpoints_new={}
+        for traj_segment_key in setpoints:
+
+            traj_segment = setpoints[traj_segment_key]
+
+            # If the trajectory segment is empty, pass that along
+            if traj_segment is None:
+                setpoints_new[traj_segment_key] = None
+                continue
+
+            # If the trajectory has lines, convert them
+            setpoints_new[traj_segment_key] = []
+            for line in traj_segment:
+                setpoints_new[traj_segment_key].append(conversion_fun(line))
+
+        setpoints_new['meta'] = {'converted': True}
+        def_new['config']['setpoints']=setpoints_new
+        self.definition = def_new
         return True
 
 

@@ -37,3 +37,10 @@ for file in files_to_use:
     traj.load_traj_def(os.path.join(setup_location,file))
     traj.convert(conversion_fun)
     traj.save_traj(os.path.join(build_location,file+'_convert'))
+
+# Convert the definitions if possible
+traj = sorotraj.TrajBuilder(graph=False)
+for file in files_to_use:
+    traj.load_traj_def(os.path.join(setup_location,file))
+    traj.convert_definition(conversion_fun)
+    traj.save_definition(os.path.join(setup_location,file+'_convert'))
