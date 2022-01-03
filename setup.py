@@ -9,7 +9,7 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     install_requires=['numpy','scipy','matplotlib','pyyaml'],
-    url='https://github.com/cbteeple/soro-traj',
+    url='https://github.com/harvard-microrobotics/sorotraj',
     author='Clark Teeple',
     author_email='cbteeple@gmail.com',
 )
