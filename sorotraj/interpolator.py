@@ -86,10 +86,11 @@ class Interpolator:
             num_channels = values.shape[1]
             self.interp_fun = []
             for idx in range(num_channels):
-                self.interp_fun.append(interp1d(times,values[:,idx],bounds_error=False,fill_value=values[-1,idx], axis=0))
+                self.interp_fun.append(interp1d(times,values[:,idx],bounds_error=False,fill_value=(values[0,idx],values[-1,idx]), axis=0))
         else:
             # Make one function returning an array of channel values
-            self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
+            #self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
+            self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=(values[0,:],values[-1,:]), axis=0)
 
         return self.interp_fun
 
