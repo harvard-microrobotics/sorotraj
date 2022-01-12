@@ -16,7 +16,7 @@ out_folder  = "traj_built"
 
 
 class TrajBuilder:
-    def __init__(self, graph=True):
+    def __init__(self, graph=False):
         self.filename = None
         self.full_trajectory = None
         self.graph = graph
@@ -208,7 +208,11 @@ class TrajBuilder:
 
         #Stick everything together
         out_times = np.vstack(time_samp)
-        out_traj  = np.matmul(np.asmatrix(traj).T,np.asmatrix(press_amp))
+        traj_arr = np.reshape(np.array(traj),(1,len(traj)))
+        press_amp_arr = np.reshape(np.array(press_amp),(1,len(press_amp)))
+        print(traj_arr.shape)
+
+        out_traj  = np.matmul(traj_arr.T,press_amp_arr)
         press_off_all=np.tile(press_off,(len(traj),1))
         out_traj = press_off_all +out_traj
 
