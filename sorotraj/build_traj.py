@@ -21,7 +21,6 @@ class TrajBuilder:
         self.full_trajectory = None
         self.graph = graph
 
-
     # Load the trajectory definition from a file
     def load_traj_def(self, filename):
         filename=filename.replace('.yaml','')
