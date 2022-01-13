@@ -74,6 +74,21 @@ class TestTrajBuilder:
 
 
 
+scenarios_errs = [  ('duplicate_time', {'filename':'setpoint_traj_demo_err0.yaml'}),
+               ('non_monotonic_time', {'filename':'setpoint_traj_demo_err1.yaml'}),
+               ]
+
+
+class TestTrajBuilderErrs:
+    scenarios = scenarios_errs
+
+    def test_traj_builderErrs(self, filename):
+        with pytest.raises(Exception) as e_info:
+            traj_builder = get_traj_builder(filename)
+            #traj = traj_builder.get_trajectory()
+
+
+
 
 scenarios_interp = [  ('setpoint_empty_prefix', {'filename':'setpoint_traj_demo_0.yaml', 'expected_time':8}),
                ('setpoint_oneline_prefix', {'filename':'setpoint_traj_demo_1.yaml', 'expected_time':8}),

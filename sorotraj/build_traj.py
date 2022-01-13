@@ -8,19 +8,31 @@ import yaml
 import sys
 import os
 import copy
-
-
-
-traj_folder = "traj_setup"
-out_folder  = "traj_built"
+import sorotraj
 
 
 class TrajBuilder:
-    def __init__(self, graph=False, verbose=False):
+    """
+    Trajectory builder
+
+    Attributes
+    ----------
+    verbose : bool
+        Flag used to turn on verbose printing
+
+    Examples
+    --------
+    >>> def_file = 'examples/traj_setup/setpoint_traj_demo.yaml'
+    ... builder = TrajBuilder()
+    ... builder.load_traj_def(def_file)
+    ... traj = builder.get_trajectory()
+    ... out_file = 'examples/traj_built/setpoint_traj_demo.traj'
+    ... builder.save_traj(out_file)
+    """
+    def __init__(self, verbose=False):
         self.filename = None
         self.definition = None
         self.full_trajectory = None
-        self.graph = graph
         self.verbose=verbose
 
 
@@ -42,7 +54,6 @@ class TrajBuilder:
         """
         if not isinstance(filename, str):
             raise ValueError("filename must be a string")
-            return
 
         # Strip yaml file prefix
         filename=filename.replace('.yaml','')
@@ -52,7 +63,9 @@ class TrajBuilder:
 
         # Read in the setpoint file
         self.definition = sorotraj.load_yaml(filename+'.yaml')
-        print('Trajectory Loaded: %s'%(filename+'.yaml'))
+
+        if self.verbose:  
+            print('Trajectory Loaded: %s'%(filename+'.yaml'))
 
         # Build the trajectory
         self.build_traj()
@@ -69,7 +82,6 @@ class TrajBuilder:
         """
         if self.definition is None:
             raise RuntimeError("Trajectory definition has not been set or loaded.")
-            return
 
         self.settings = self.definition.get("settings",None)
         self.config = self.definition.get("config",None)
@@ -79,6 +91,7 @@ class TrajBuilder:
 
         # Generate the trajectory based on the file definition
         self._expand_traj()
+        self._validate_traj()
 
 
 
@@ -100,20 +113,19 @@ class TrajBuilder:
         """
         if not isinstance(definition, dict):
             raise ValueError("Trajectory definition must be of type 'dict'.")
-            return
 
         self.definition = copy.deepcopy(definition)
         self.build_traj()
 
 
     # Pass out the trajectory definition
-    def get_definition(self, reference=False):
+    def get_definition(self, use_copy=False):
         """
         Get the trajectory definition.
 
         Parameters
         ----------
-        reference : bool
+        use_copy : bool
             Decide whether to pass the trajectory by referece. If True,
             the actual trajectory object is returned, otherwise a copy
             of the trajectory is returned.
@@ -130,21 +142,20 @@ class TrajBuilder:
         """
         if self.definition is None:
             raise RuntimeError("Trajectory definition has not been set or loaded.")
-            return
         
-        if reference:
+        if use_copy:
             return self.definition
         else:
             return copy.deepcopy(self.definition)
 
     
-    def get_trajectory(self, reference=False):
+    def get_trajectory(self, use_copy=False):
         """
         Get the built trajectory.
 
         Parameters
         ----------
-        reference : bool
+        use_copy : bool
             Decide whether to pass the trajectory by referece. If True,
             the actual trajectory object is returned, otherwise a copy
             of the trajectory is returned.
@@ -161,9 +172,8 @@ class TrajBuilder:
         """
         if self.full_trajectory is None:
             raise RuntimeError("Trajectory has not been built.")
-            return
 
-        if reference:
+        if use_copy:
             return self.full_trajectory
         else:
             return copy.deepcopy(self.full_trajectory)
@@ -187,11 +197,9 @@ class TrajBuilder:
         """
         if not isinstance(filename, str):
             raise ValueError("filename must be a string")
-            return
 
         if self.definition is None:
             raise RuntimeError("Trajectory definition has not been set or loaded.")
-
 
         # Get rid of file extension if it exists
         basename = os.path.splitext(filename)
@@ -218,14 +226,13 @@ class TrajBuilder:
         ValueError
             If the filename is not of type 'str'
         RuntimeError
-            If the trajectory definition is not set
+            If the trajectory has not been built
         """
         if not isinstance(filename, str):
             raise ValueError("filename must be a string")
-            return
 
         if self.full_trajectory is None:
-            raise RuntimeError("Trajectory definition has not been set or loaded.")
+            raise RuntimeError("Trajectory has not been built.")
 
         # Get rid of file extension if it exists
         basename = os.path.splitext(filename)
@@ -236,6 +243,35 @@ class TrajBuilder:
 
         if self.verbose:       
             print('Trajectory Saved: %s'%(filename+".traj"))
+
+
+    def _validate_traj(self):
+        """
+        Validate the current trajectory
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        ValueError
+            If the trajectory is invalid
+        """
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory has not been built.")
+
+        traj_comp = self.get_traj_components()
+
+        for traj_segment_key in traj_comp:
+            times = traj_comp[traj_segment_key]['time']
+            # Check that times do not contain duplicates
+            if len(times) != len(set(times)):
+                raise ValueError("Duplicate times found in trajectory segment: %s"%(traj_segment_key))
+
+            # Check that times are monotonic
+            if not np.all(np.diff(times) > 0):
+                raise ValueError("Times are not monotonically increasing in trajectory segment: %s"%(traj_segment_key))
+
+
 
 
     def _expand_traj(self):
@@ -256,19 +292,14 @@ class TrajBuilder:
         elif self.traj_type == "direct":
             success = self._do_direct()
         else:
-            raise ValueError('Invalid trajectory type: %s.'%(self.traj_type))
             success = False
+            raise ValueError('Invalid trajectory type: %s.'%(self.traj_type))
 
         if not success:
             raise RuntimeError('Trajectory failed to build')
 
         if self.verbose:
             print("Trajectory has %d lines"%(len(self.full_trajectory['setpoints'])))
-
-        if self.graph:
-            self.plot_traj()
-
-
 
 
     # Generate a waveform trajectory
@@ -371,7 +402,6 @@ class TrajBuilder:
 
         else:
             raise ValueError("Invald waveform type: %s"%(waveform_type))
-            return False
 
 
         #Stick everything together
@@ -467,15 +497,8 @@ class TrajBuilder:
             allOut = np.insert(traj,0, t_intermediate ,axis = 1)
             allOut = allOut.tolist()
 
-            if self.graph:
-                plt.plot(t_intermediate,traj)
-                plt.plot(times,pres,'ok')
-                plt.show()
-
         else:
             raise ValueError("Invalid interpolation type: %s"%(interp_type))
-            return False
-            
 
         self.full_trajectory = {}
         self.full_trajectory['prefix'] = prefix
@@ -485,7 +508,6 @@ class TrajBuilder:
         return True
 
 
-    # Find the nearest point
     def _find_nearest(self, array, values):
         """
         Find the nearest points in interpolated trajectory
@@ -509,10 +531,9 @@ class TrajBuilder:
         return idx
 
 
-    # Calculate a linear trajectory segment
     def _calculate_lin_segment(self,start_point,end_point,t_step):
         """
-        Calculate a linear segment
+        Calculate a linear trajectory segment
 
         Parameters
         ----------
@@ -548,10 +569,23 @@ class TrajBuilder:
 
 
     # Convert a trajectory using a conversion function
-    def convert_traj(self,conversion_fun, overwrite=False):
+    def convert_traj(self,conversion_fun):
+        """
+        Convert a trajectory line-by-line using a conversion function
+
+        Parameters
+        ----------
+        conversion_fun : function
+            Conversion function taking in one trajectory line (list) and returning one line (list)
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        """
+
         if self.full_trajectory is None:
-            print('No trajectory loaded: Please load a trajectory')
-            return False
+            raise RuntimeError("Trajectory has not been built.")
         
         full_trajectory_new = dict()
         for traj_segment_key in self.full_trajectory:
@@ -573,21 +607,35 @@ class TrajBuilder:
 
         full_trajectory_new['meta'] = {'converted': True}
         self.full_trajectory = full_trajectory_new
-        return True
 
 
-    # Convert a trajectory definition using a conversion function
-    def convert_definition(self,conversion_fun, overwrite=False):
+    def convert_definition(self,conversion_fun):
+        """
+        Convert a trajectory definition line-by-line using a conversion function.
+
+        Trajectory definition of type 'direct' and 'interp' can be converted, but
+        waveform trajectory definitions cannot.
+
+        Parameters
+        ----------
+        conversion_fun : function
+            Conversion function taking in one waypoint (list) and returning waypoint (list)
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory definition is not set
+        RuntimeError
+            If the trajectory type is incompatible (not direct or interp)
+        """
         if self.definition is None:
-            print('No trajectory loaded: Please load a trajectory')
-            return False
+            raise RuntimeError("Trajectory definition has not been set or loaded.")
 
-        if self.traj_type == "waveform":
-            print('Cannot convert trajectory of type: "waveform"')
-            return False
+        if not (self.traj_type in ["direct","interp"]):
+            raise RuntimeError("Incompatible trajectory type: %s"%(self.traj_type))
         
         def_new = copy.deepcopy(self.definition)
-        setpoints=self.definition['config']['setpoints']
+        setpoints=copy.deep_copy(self.definition['config']['setpoints'])
         setpoints_new={}
         for traj_segment_key in setpoints:
 
@@ -605,13 +653,75 @@ class TrajBuilder:
 
         setpoints_new['meta'] = {'converted': True}
         def_new['config']['setpoints']=setpoints_new
-        self.definition = def_new
-        return True
 
+        self.definition = def_new
+        self.build_traj()
+
+
+    def get_traj_components(self):
+        """
+        Get trajectory split into compoenents rather than in vector form
+
+        This generates a dictionary with the same trajectory components as 
+        a usual trajectory, but the values of each component are dictionaries
+        with 'time' and 'values' rather than the usual list of lists.
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        """
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory has not been built.")
+
+        setpoints = self.full_trajectory['setpoints']
+        prefix = self.full_trajectory['prefix']
+        suffix = self.full_trajectory['suffix']
+
+        out = {}
+        out['setpoints'] = {}
+        if setpoints is not None:
+            out_traj_all = np.asarray(setpoints)
+            out['setpoints']['time'] = out_traj_all[:,0]
+            out['setpoints']['values'] = out_traj_all[:,1:]
+        else:
+            out['setpoints']['time'] = []
+            out['setpoints']['values'] = []
+
+        out['prefix'] = {}
+        if prefix is not None:
+            prefix_arr = np.asarray(prefix)
+            out['prefix']['time'] = prefix_arr[:,0].tolist()
+            out['prefix']['values'] = prefix_arr[:,1:].tolist()
+        else:
+            out['prefix']['time'] = []
+            out['prefix']['values'] = []
+
+        out['suffix'] = {}
+        if suffix is not None:
+            suffix_arr = np.asarray(suffix)        
+            out['suffix']['time'] = suffix_arr[:,0].tolist()
+            out['suffix']['values'] = suffix_arr[:,1:].tolist()
+        else:
+            out['suffix']['time'] = []
+            out['suffix']['values'] = []
+
+        return out
 
 
     # Plot the current trajectory 
     def plot_traj(self):
+        """
+        Plot the current trajectory (assuming 1 rep of the main segment)
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        """
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory has not been built.")
+        
         out_traj_all = np.asarray(self.full_trajectory['setpoints'])
         prefix = self.full_trajectory['prefix']
         suffix = self.full_trajectory['suffix']
@@ -632,25 +742,4 @@ class TrajBuilder:
         plt.plot(out_traj_all[:,0],out_traj_all[:,1:])
         plt.xlabel("Time (s)")
         plt.ylabel("Pressure (psi)")
-        plt.show()
-
-        
-
-
-if __name__ == '__main__':
-    if len(sys.argv)==2:
-
-        in_file = os.path.join(traj_folder,sys.argv[1])
-        out_file = os.path.join(out_folder,sys.argv[1])
-        build = TrajBuilder()
-        build.load_traj_def(in_file)
-        build.save_traj(out_file)
-
-    else:
-        print('make sure you give a filename')
-        
-        
-        
-        
-        
-        
+        plt.show()        
