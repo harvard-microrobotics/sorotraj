@@ -3,12 +3,14 @@ import sorotraj
 #file_to_use = 'traj_setup/setpoint_traj_demo.yaml'
 file_to_use = 'traj_setup/waveform_traj_demo.yaml'
 
-build = sorotraj.TrajBuilder()
-build.load_traj_def(file_to_use)
-traj = build.get_trajectory()
+builder = sorotraj.TrajBuilder()
+builder.load_traj_def(file_to_use)
+traj = builder.get_trajectory()
 for key in traj:
 	print(key)
 	print(traj[key])
+
+builder.plot_traj()
 
 interp = sorotraj.Interpolator(traj)
 actuation_fn = interp.get_interp_function(

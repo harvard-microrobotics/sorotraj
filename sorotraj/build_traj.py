@@ -16,104 +16,271 @@ out_folder  = "traj_built"
 
 
 class TrajBuilder:
-    def __init__(self, graph=False):
+    def __init__(self, graph=False, verbose=False):
         self.filename = None
+        self.definition = None
         self.full_trajectory = None
         self.graph = graph
+        self.verbose=verbose
 
-    # Load the trajectory definition from a file
+
     def load_traj_def(self, filename):
+        """
+        Load a trajectory definition from a file.
+
+        Once lodaed, the trajectory definition is set, and the trajectory is built.
+
+        Parameters
+        ----------
+        filename : str
+            The file to load
+
+        Raises
+        ------
+        ValueError
+            If the filename is not of type 'str'
+        """
+        if not isinstance(filename, str):
+            raise ValueError("filename must be a string")
+            return
+
+        # Strip yaml file prefix
         filename=filename.replace('.yaml','')
 
+        # Save the filename with no prefix
         self.filename = os.path.abspath(filename+'.yaml').replace('.yaml','')
 
         # Read in the setpoint file
-        with open(filename+'.yaml') as f:
-            # use safe_load instead of load
-            inStuff = yaml.safe_load(f)
-            f.close()
-
+        self.definition = sorotraj.load_yaml(filename+'.yaml')
         print('Trajectory Loaded: %s'%(filename+'.yaml'))
 
-        self.definition=inStuff
-        self.settings = inStuff.get("settings",None)
-        self.config = inStuff.get("config",None)
+        # Build the trajectory
+        self.build_traj()
+    
+
+    def build_traj(self):
+        """
+        Build the current trajectory
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory definition has not been set
+        """
+        if self.definition is None:
+            raise RuntimeError("Trajectory definition has not been set or loaded.")
+            return
+
+        self.settings = self.definition.get("settings",None)
+        self.config = self.definition.get("config",None)
         
         self.traj_type = str(self.settings.get("traj_type"))
         self.subsample_num = self.config.get("subsample_num")
 
         # Generate the trajectory based on the file definition
-        self.go()
+        self._expand_traj()
 
 
-    # Save yaml files of trajectory definitions.
-    def save_definition(self, filename=None):
-        if filename is None:
-            if self.filename is None:
-                print('You need to get trajectory settings before you can save')
-                return
-            else:
-                filename=self.filename
 
-        # Get rid of file extension if it exists
-        basename = os.path.splitext(filename)
-        filename = basename[0]
+    def set_definition(self, definition):
+        """
+        Set the trajectory definition manually.
 
-        dirname = os.path.dirname(filename+".yaml")
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        The trajectory definition is set, and the trajectory is rebuilt.
 
-        with open(filename+".yaml", 'w') as f:
-            yaml.dump(self.definition, f, default_flow_style=None)
+        Parameters
+        ----------
+        definition : dict
+            The trajectory definition to set
+
+        Raises
+        ------
+        ValueError
+            If the trajectory definition is not of type 'dict'
+        """
+        if not isinstance(definition, dict):
+            raise ValueError("Trajectory definition must be of type 'dict'.")
+            return
+
+        self.definition = copy.deepcopy(definition)
+        self.build_traj()
+
+
+    # Pass out the trajectory definition
+    def get_definition(self, reference=False):
+        """
+        Get the trajectory definition.
+
+        Parameters
+        ----------
+        reference : bool
+            Decide whether to pass the trajectory by referece. If True,
+            the actual trajectory object is returned, otherwise a copy
+            of the trajectory is returned.
+
+        Returns
+        -------
+        trajectory_definition : dict
+            The trajectory definition
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory definition is not set set
+        """
+        if self.definition is None:
+            raise RuntimeError("Trajectory definition has not been set or loaded.")
+            return
         
-        print('Trajectory Definition Saved: %s'%(filename+".yaml"))
-
-
-    # Save yaml files of trajectories generated.
-    def save_traj(self, filename=None):
-        if filename is None:
-            if self.filename is None:
-                print('You need to get trajectory settings before you can save')
-                return
-            else:
-                filename=self.filename
-
-        # Get rid of file extension if it exists
-        basename = os.path.splitext(filename)
-        filename = basename[0]
-
-        dirname = os.path.dirname(filename+".traj")
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-
-        with open(filename+".traj", 'w') as f:
-            yaml.dump(self.full_trajectory, f, default_flow_style=None)
-        
-        print('Trajectory Saved: %s'%(filename+".traj"))
-
-
-    # Generate the trajectory based on the file definition
-    def go(self):
-        if self.traj_type == "waveform":
-            success = self.do_waveform()
-        elif self.traj_type == "interp":
-            success = self.do_interp()
-        elif self.traj_type == "direct":
-            success = self.do_direct()
-        elif self.traj_type == "none":
-            success = self.do_none()
+        if reference:
+            return self.definition
         else:
-            print('Please give your trajectory a valid type')
+            return copy.deepcopy(self.definition)
+
+    
+    def get_trajectory(self, reference=False):
+        """
+        Get the built trajectory.
+
+        Parameters
+        ----------
+        reference : bool
+            Decide whether to pass the trajectory by referece. If True,
+            the actual trajectory object is returned, otherwise a copy
+            of the trajectory is returned.
+
+        Returns
+        -------
+        trajectory : dict
+            The full trajectory
+        
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        """
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory has not been built.")
+            return
+
+        if reference:
+            return self.full_trajectory
+        else:
+            return copy.deepcopy(self.full_trajectory)
+
+
+    def save_definition(self, filename):
+        """
+        Save the trajectory definition to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file to save
+
+        Raises
+        ------
+        ValueError
+            If the filename is not of type 'str'
+        RuntimeError
+            If the trajectory definition is not set
+        """
+        if not isinstance(filename, str):
+            raise ValueError("filename must be a string")
+            return
+
+        if self.definition is None:
+            raise RuntimeError("Trajectory definition has not been set or loaded.")
+
+
+        # Get rid of file extension if it exists
+        basename = os.path.splitext(filename)
+        filename = basename[0]
+
+        # Save the trajectory definition
+        sorotraj.save_yaml(self.definition, filename+".yaml")
+
+        if self.verbose:    
+            print('Trajectory Definition Saved: %s'%(filename+".yaml"))
+
+
+    def save_traj(self, filename):
+        """
+        Save the trajectory to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file to save
+
+        Raises
+        ------
+        ValueError
+            If the filename is not of type 'str'
+        RuntimeError
+            If the trajectory definition is not set
+        """
+        if not isinstance(filename, str):
+            raise ValueError("filename must be a string")
+            return
+
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory definition has not been set or loaded.")
+
+        # Get rid of file extension if it exists
+        basename = os.path.splitext(filename)
+        filename = basename[0]
+
+        # Save the trajectory
+        sorotraj.save_yaml(self.full_trajectory, filename+".traj")
+
+        if self.verbose:       
+            print('Trajectory Saved: %s'%(filename+".traj"))
+
+
+    def _expand_traj(self):
+        """
+        Generate the trajectory based on the definition
+
+        Raises
+        ------
+        ValueError
+            If the trajectory type is invalid
+        RuntimeError
+            If the trajectory fails to build
+        """
+        if self.traj_type == "waveform":
+            success = self._do_waveform()
+        elif self.traj_type == "interp":
+            success = self._do_interp()
+        elif self.traj_type == "direct":
+            success = self._do_direct()
+        else:
+            raise ValueError('Invalid trajectory type: %s.'%(self.traj_type))
             success = False
 
-        if success and self.graph:
+        if not success:
+            raise RuntimeError('Trajectory failed to build')
+
+        if self.verbose:
+            print("Trajectory has %d lines"%(len(self.full_trajectory['setpoints'])))
+
+        if self.graph:
             self.plot_traj()
-            print("Trajectory has %d lines"%(len(self.full_trajectory['setpoints'] )))
+
 
 
 
     # Generate a waveform trajectory
-    def do_waveform(self):
+    def _do_waveform(self):
+        """
+        Generate a waveform trajectory based on the trajectory definition
+
+        Raises
+        ------
+        ValueError
+            If the waveform type is invalid
+        """
         freq_in = self.config.get("waveform_freq")
 
         # Convert the frequency to floats
@@ -203,6 +370,7 @@ class TrajBuilder:
             traj = np.append(traj, traj[0])
 
         else:
+            raise ValueError("Invald waveform type: %s"%(waveform_type))
             return False
 
 
@@ -227,15 +395,17 @@ class TrajBuilder:
         return True
 
 
-        
-    # Generate a direct trajectory straight from the setpoint list given
-    def do_direct(self):
+    def _do_direct(self):
+        """
+        Generate a trajectory directly from waypoints in the trajectory definition
+        """
+        # Get trajectory components
         setpts = self.config.get("setpoints",None)
         traj_setpoints = setpts.get("main",  None)
         prefix = setpts.get("prefix",None)
         suffix = setpts.get("suffix",None)
-        interp_type = str(self.config.get("interp_type"))
 
+        # Copy trajectory components over to the final trajectory 
             
         self.full_trajectory = {}
         self.full_trajectory['prefix'] = prefix
@@ -245,11 +415,18 @@ class TrajBuilder:
         return True
 
 
-    # Generate an interpolation trajectory
-    def do_interp(self):
+    def _do_interp(self):
+        """
+        Generate an interpolation trajectory based on the trajectory definition
+
+        Raises
+        ------
+        ValueError
+            If the interpolation type is invalid
+        """
         interp_type = str(self.config.get("interp_type"))
         if interp_type == "none":
-            return self.do_direct()
+            return self._do_direct()
 
 
         setpts = self.config.get("setpoints",None)
@@ -264,7 +441,7 @@ class TrajBuilder:
             # Calculate the longer trajectory
             allOut=[]
             for idx in range(0,len(traj_setpoints)-1):
-                seg = self.calculate_lin_segment(traj_setpoints[idx],traj_setpoints[idx+1],t_step)
+                seg = self._calculate_lin_segment(traj_setpoints[idx],traj_setpoints[idx+1],t_step)
                 allOut.extend(seg)
             
             # Add the last entry to finish out the trajectory
@@ -281,7 +458,7 @@ class TrajBuilder:
 
             # Replace nearest points with the original knot points
             t_intermediate = np.linspace(times[0],times[-1], self.subsample_num+1 )
-            idx = self.find_nearest(t_intermediate, times)
+            idx = self._find_nearest(t_intermediate, times)
             t_intermediate[idx] = times
 
             # Generate a cubic spline
@@ -296,7 +473,8 @@ class TrajBuilder:
                 plt.show()
 
         else:
-            allOut = traj_setpoints
+            raise ValueError("Invalid interpolation type: %s"%(interp_type))
+            return False
             
 
         self.full_trajectory = {}
@@ -307,18 +485,23 @@ class TrajBuilder:
         return True
 
 
-    # Do nothing if the trajectory type is not supported
-    def do_none(self):
-        return True
-
-
-    # Pass out the built trajectory
-    def get_trajectory(self):
-        return self.full_trajectory
-
-
     # Find the nearest point
-    def find_nearest(self, array, values):
+    def _find_nearest(self, array, values):
+        """
+        Find the nearest points in interpolated trajectory
+
+        Parameters
+        ----------
+        array : array-like
+            The array to search through
+        values : list
+            list of values
+
+        Returns
+        -------
+        idx : list
+            list of indices in interpolated array where values are closest
+        """
         array = np.asarray(array)
         idx=[]
         for val in values:
@@ -327,8 +510,24 @@ class TrajBuilder:
 
 
     # Calculate a linear trajectory segment
-    def calculate_lin_segment(self,start_point,end_point,t_step):
+    def _calculate_lin_segment(self,start_point,end_point,t_step):
+        """
+        Calculate a linear segment
 
+        Parameters
+        ----------
+        start_point : array-like
+            1D array of start values (idx 0 is the time)
+        end_point : list
+            1D array of end values (idx 0 is the time)
+        t_step : float
+            Timestep
+
+        Returns
+        -------
+        segment : list of lists
+            List of trajectory points
+        """
         # Calculate the linear interpolation time vector
         t_intermediate = np.arange(start_point[0],end_point[0],t_step)
         #print(t_step)
@@ -349,14 +548,14 @@ class TrajBuilder:
 
 
     # Convert a trajectory using a conversion function
-    def convert(self,conversion_fun):
+    def convert_traj(self,conversion_fun, overwrite=False):
         if self.full_trajectory is None:
             print('No trajectory loaded: Please load a trajectory')
             return False
         
         full_trajectory_new = dict()
         for traj_segment_key in self.full_trajectory:
-            # If the trajectory segment key is the metadat tag, skip it.
+            # If the trajectory segment key is the metadata tag, skip it.
             if traj_segment_key == 'meta':
                 continue
 
@@ -378,7 +577,7 @@ class TrajBuilder:
 
 
     # Convert a trajectory definition using a conversion function
-    def convert_definition(self,conversion_fun):
+    def convert_definition(self,conversion_fun, overwrite=False):
         if self.definition is None:
             print('No trajectory loaded: Please load a trajectory')
             return False
