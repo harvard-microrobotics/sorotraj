@@ -16,7 +16,7 @@ Generate trajectories for soft robots from yaml files (accompanies the [Ctrl-P p
 ``` python
 import sorotraj
 
-file_to_use = 'traj_setup/setpoint_traj_demo'
+file_to_use = 'traj_setup/setpoint_traj_demo.yaml'
 
 traj = sorotraj.TrajBuilder()
 traj.load_traj_def(file_to_use)
@@ -25,8 +25,7 @@ interp = sorotraj.Interpolator(trajectory)
 actuation_fn = interp.get_interp_function(
                 num_reps=1,
                 speed_factor=2.0,
-                invert_direction=False,
-                as_array=False)
+                invert_direction=False)
 print(actuation_fn(2.155))
 ```
 **Check out the _examples_ folder for more detailed usage examples**
@@ -90,14 +89,18 @@ Check out the _build_convert_trajectories.py_ example.
 2. Load the trajectory like normal
 	- `traj.load_traj_def(file_to_use)`
 3. Convert the trajectory by passing the conversion function
-	- `traj.convert(conversion_function)`
+	- `traj.convert_traj(conversion_function)`
 4. This conversion overwrites the original trajectory. Now you can save it like normal
 	- `traj.save_traj(file_to_save)`
+5. Convert the trajectory definition by passing the conversion function
+	- `traj.convert_definition(conversion_function)`
+4. This conversion overwrites the original trajectory definition and reguilds the trajectory. Now you can save the definition like normal
+	- `traj.save_definition(file_to_save)`
 
 
 
 
-## Use the Interpolator
+## Build an interpolator
 ```python
 interp = sorotraj.Interpolator(trajectory)
 ```
@@ -105,11 +108,10 @@ interp = sorotraj.Interpolator(trajectory)
 
 
 ```python
-actuation_fn = interp.get_interp_function(
+actuation_fn, final_time = interp.get_traj_function(
                 num_reps=1,
                 speed_factor=1.0,
-                invert_direction=False,
-                as_list=False)
+                invert_direction=False)
 ```
 - **num_reps**: (`int`, default=1) Number of times to repeat the main looping trajectory
     - Must be positive, nonzero
@@ -118,15 +120,13 @@ actuation_fn = interp.get_interp_function(
 - **invert_direction**: (`bool`, default=False) Negate the whole trajectory (useful if actuators have different directionalities)
     - (`bool`): Negate all channels
     - (`list of ints`): Choose which channels to negate with a list of channel indices
-- **as_list**: (`bool`, default=False) get the interpolation function as a list of 1D functions (one for each channel) rather than a single 2D interpolation
 
 
 ```python
 cycle_fn = interp.get_cycle_function(
                 num_reps=1,
                 speed_factor=1.0,
-                invert_direction=False,
-                as_list=False)
+                invert_direction=False)
 ```
 - Same inputs as `get_interp_function()`, but returns a cycle function (returns the current cycle as a function of time)
 - cycle_fn takes these values:
