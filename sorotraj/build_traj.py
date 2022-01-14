@@ -551,8 +551,6 @@ class TrajBuilder:
         """
         # Calculate the linear interpolation time vector
         t_intermediate = np.arange(start_point[0],end_point[0],t_step)
-        #print(t_step)
-        #print(t_intermediate)
         
         # Turn the incomming setpoints into arrays
         time_vec = np.asarray([end_point[0], start_point[0]])

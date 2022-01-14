@@ -7,6 +7,7 @@ import sys
 import os
 import sorotraj
 import copy
+import warnings
 
 
 class Interpolator:
@@ -47,108 +48,92 @@ class Interpolator:
         ValueError
             If the 'main' trajectory segment is None 
         """
-        prefix = trajectory.get('prefix', None)
-        suffix = trajectory.get('suffix', None)
-        main = trajectory.get('setpoints', None)
+        trajectory = copy.deepcopy(trajectory)
+        if trajectory.get('setpoints',False):
+            trajectory['main'] = trajectory.pop('setpoints')
 
-        if main is not None:
-            main   = np.array(main)
-            self.main =    {'time' : main[:,0]  ,
-                            'values': main[:,1:],
-                            'max_time': np.max(main[:,0]),
-                            'min_time': np.min(main[:,0]) }
-        else:
-            self.main = None
+        # Unpack the trajectory and make sure there is at least one waypoint
+        # in each component 
+        key_list = ['prefix', 'main', 'suffix']
+        self.trajectory_unpacked = {}
+        for key in key_list:
+            curr_unpacked = None
+            curr_data = trajectory.get(key, None)
+            if curr_data is not None:
+                if len(curr_data)>0:
+                    curr_data   = np.array(curr_data)
+                    curr_unpacked =    {'time' : curr_data[:,0]  ,
+                                    'values': curr_data[:,1:],
+                                    'max_time': np.max(curr_data[:,0]),
+                                    'min_time': np.min(curr_data[:,0]) }
+                
+            self.trajectory_unpacked[key] = curr_unpacked
+        
 
+    def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=None):
+        """
+        Get a trajectory interpolation function with the specified parameters
 
-        if prefix is not None:
-            prefix = np.array(prefix)
-            self.prefix =  {'time' : prefix[:,0]  ,
-                            'values': prefix[:,1:],
-                            'max_time': np.max(prefix[:,0]),
-                            'min_time': np.min(prefix[:,0])}
-        else:
-            self.prefix = None
+        (This function exists for backward compatibillity. In the future, use
+        "get_traj_function" instead.)
 
+        Parameters
+        ----------
+        num_reps : int
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float
+            Speed multiplier (times are multiplied by inverse of this)
+        invert_direction : Union[bool, list]
+            Invert the sign of the interpolated values. If True, all signs are
+            flipped. If list, invert_direction is treated as a list of indices.
 
-        if suffix is not None:
-            suffix = np.array(suffix)
-            self.suffix =  {'time' : suffix[:,0]  ,
-                            'values': suffix[:,1:],
-                            'max_time': np.max(suffix[:,0]),
-                            'min_time': np.min(suffix[:,0])  }
-        else:
-            self.suffix =  None
+        Returns
+        -------
+        traj_function
+            The trajectory interpolation function
 
-        self.trajectory_unpacked = {
-            'main':self.main,
-            'prefix':self.prefix,
-            'suffix':self.suffix,
-        }
-
-
-    def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
-        #self._build_interp_function(num_reps, speed_factor, invert_direction, as_list)
-        self.build_traj_funtions(num_reps=1, speed_factor = 1.0, invert_direction=False)
-        return self.interp_fun
-
-    # Generate an interpolation function based on the trajectory
-    def _build_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
-        if num_reps<1:
-            raise ValueError("The number of reps must be greater than 0")
+        Raises
+        ------
+        ValueError
+            If num_reps is less than 0, or if speed_factor is 0 or less
+        """
+        num_reps=int(num_reps)
+        if num_reps<0:
+            raise ValueError("The number of reps must be at least 0")
 
         if speed_factor<=0:
-            raise ValueError("The speed factor must be greater than 0")
+            raise ValueError("The speed factor must be strictly greater than 0")
 
-        num_reps = int(num_reps)
-        
-        # Duplicate the time vector
-        time_use = self.main['time'][1:]
-        len_traj = time_use.shape[0]
-        times  = np.zeros((len_traj)*num_reps)
+        if as_list is not None:
+            raise DeprecationWarning('Using "as_list" to get a list of interpolation functions is no longer supported')
 
-        for idx in range(num_reps):
-            new_times=time_use + idx*time_use[-1]
-            times[idx*len_traj: (idx+1)*len_traj]= new_times
-        times = np.insert(times, 0, self.main['time'][0])
-        times = times/speed_factor
+        interp_fun, final_time = self.get_traj_function(num_reps=1, speed_factor = 1.0, invert_direction=False)
+        self.interp_fun = interp_fun
+        self.final_time = final_time
+        return self.interp_fun
 
-        # Duplicate the values
-        values = np.tile(self.main['values'][1:,:],(num_reps,1))
-        values = np.insert(values, 0, self.main['values'][0,:], axis=0)
-
-        # Insert the prefix and suffix
-        if self.prefix is not None:
-            times=times+self.prefix['time'][-1]
-            times = np.insert(times, range(self.prefix['time'].shape[0]), self.prefix['time'], axis=0)
-            values = np.insert(values, range(self.prefix['values'].shape[0]), self.prefix['values'], axis=0)
-
-        if self.suffix is not None:
-            times = np.append(times, self.suffix['time']+times[-1], axis=0)
-            values = np.append(values, self.suffix['values'], axis=0)
-
-        self.final_time = times[-1]
-
-        if isinstance(invert_direction,list):
-            values[:,invert_direction] = -values[:,invert_direction]
-        elif invert_direction == True:
-            values = -values
-
-        # Make an the interpolation function
-        if as_list:
-            # Make an array of 1D functions, one for each channel
-            num_channels = values.shape[1]
-            self.interp_fun = []
-            for idx in range(num_channels):
-                self.interp_fun.append(interp1d(times,values[:,idx],bounds_error=False,fill_value=(values[0,idx],values[-1,idx]), axis=0))
-        else:
-            # Make one function returning an array of channel values
-            #self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=values[-1,:], axis=0)
-            self.interp_fun = interp1d(times,values,bounds_error=False,fill_value=(values[0,:],values[-1,:]), axis=0)
-    
 
     def get_traj_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False):
+        """
+        Get a trajectory interpolation function with the specified parameters
 
+        Parameters
+        ----------
+        num_reps : int
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float
+            Speed multiplier (times are multiplied by inverse of this)
+        invert_direction : Union[bool, list]
+            Invert the sign of the interpolated values. If True, all signs are
+            flipped. If list, invert_direction is treated as a list of indices.
+
+        Returns
+        -------
+        traj_function : function
+            The trajectory interpolation function
+        final_time : float
+            The end time of the trajectory
+        """
         traj_interp = TrajectoryInterpolator(self.trajectory_unpacked,
                                                 num_reps, speed_factor, invert_direction)
 
@@ -157,8 +142,30 @@ class Interpolator:
         return interp_fun, final_time
 
 
-    # Generate a function to return the current cycle number given times
-    def get_cycle_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=False):
+    def get_cycle_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=None):
+        """
+        Get a function to return the current cycle number given time as an input
+
+        Parameters
+        ----------
+        num_reps : int
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float
+            Speed multiplier (times are multiplied by inverse of this)
+        invert_direction : Union[bool, list]
+            Invert the sign of the interpolated values. If True, all signs are
+            flipped. If list, invert_direction is treated as a list of indices.
+
+        Returns
+        -------
+        cycle_function : function
+            The cycle function
+        final_time : float
+            The end time of the trajectory
+        """
+
+        if as_list is not None:
+            raise DeprecationWarning('Using "as_list" to get a list of interpolation functions is no longer supported')
 
         if self.prefix is not None:
             prefix_dur = self.prefix['time'][-1]
@@ -196,17 +203,74 @@ class Interpolator:
         return cycle_fn
 
 
-    # Get the final time of the interpolation
     def get_final_time(self):
+        """
+        Get the final time of the most-recent interpolator
+
+        (This function exists for backward compatibillity. In the future, obtain the
+        final time from the "get_traj_function" instead.)
+
+        Parameters
+        ----------
+
+
+        """
         return self.final_time
 
 
 
 class TrajectoryInterpolator:
-    def __init__(self, traj_unpacked, num_reps=1, speed_factor = 1.0, invert_direction=False):
+    """
+    A trajectory interpolator based on specified parameters
+
+    Parameters
+    ----------
+    traj_unpacked : dict
+        Unpacked trajectory object (dict where keys are trajectory components
+        with fields "time" and ""values")
+    num_reps : int, optional
+        Number of times to repeat the "main" trajectory segment
+    speed_factor : float, optional
+        Speed multiplier (times are multiplied by inverse of this)
+    invert_direction : Union[bool, list], optional
+        Invert the sign of the interpolated values. If True, all signs are
+        flipped. If list, invert_direction is treated as a list of indices.
+    fill_value : Union[list, np.ndarray], optional
+        Default value of signals (only used when prefix and main are empty 
+        in the trajectory)
+
+    Raises
+    ------
+    ValueError
+        If all trajectory components are empty
+    """
+    def __init__(self, traj_unpacked, num_reps=1, speed_factor = 1.0, invert_direction=False, fill_value=None):
         self.main = copy.deepcopy(traj_unpacked['main'])
         self.prefix = copy.deepcopy(traj_unpacked['prefix'])
         self.suffix = copy.deepcopy(traj_unpacked['suffix'])
+
+        seg_list = [self.prefix, self.main, self.suffix]
+        segs_valid = [None]*len(seg_list)
+        num_empty = 0
+        for idx, segment in enumerate(seg_list):
+            if segment is None:
+                segs_valid[idx] = False
+            else:
+                segs_valid[idx] = True
+
+        if sum(segs_valid)<3:
+            warnings.warn("One or more trajectory components is empty.", UserWarning)
+        
+        if sum(segs_valid)==0:
+            raise ValueError("All trajectory components are empty. Please check your trjectory definition")
+
+        first_valid = segs_valid.index(True)
+        num_channels = seg_list[first_valid]['values'].shape[-1]
+
+        if fill_value is None:
+            fill_value=[0]*num_channels
+
+        self.fill_value = np.array(fill_value)
 
         # Invert values
         if isinstance(invert_direction,list):
@@ -218,67 +282,210 @@ class TrajectoryInterpolator:
             self.prefix['values'] = -self.prefix['values']
             self.suffix['values'] = -self.suffix['values']
 
+        self._generate_interp_functions(num_reps, speed_factor)
+
+    def _generate_interp_functions(self, num_reps, speed_factor):
+        """
+        Generate nessecary interpolator functions
+
+        Parameters
+        ----------
+        traj_unpacked : dict
+            Unpacked trajectory object (dict where keys are trajectory components
+            with fields "time" and ""values")
+        num_reps : int, optional
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float, optional
+            Speed multiplier (times are multiplied by inverse of this)
+
+        Raises
+        ------
+        ValueError
+            If the trajectory is 0 seconds long
+        """
         # Generate interpolation functions
         if self.main is not None:
             self.main_duration=(self.main['time'][-1])*num_reps
-            self.interp_main = sorotraj.WrappedInterp1d(self.main['time'],
+            interpolator = sorotraj.WrappedInterp1d(self.main['time'],
                                                     self.main['values'],
                                                     axis=0)
+            self.interp_main = interpolator.get_function()
         else:
             self.main_duration=0
+            self.interp_main = None
     
         if self.prefix is not None:
             self.prefix_duration=self.prefix['time'][-1] - self.prefix['time'][0]
-            self.interp_prefix = interp1d(self.prefix['time'],
+            self.interp_prefix = interp1d_patched(self.prefix['time'],
                                       self.prefix['values'],
                                       bounds_error=False,
                                       fill_value=(self.prefix['values'][0,:],self.prefix['values'][-1,:]),
                                       axis=0)
         else:
             self.prefix_duration=0
+            self.interp_prefix = None
         
-        if self.suffix is not None: 
+        if self.suffix is not None:
+            # Insert last waypoint before suffix into time 0 in the suffix
+            if self.suffix['time'][0]>0:
+                self.suffix['time'] = np.hstack(([0], self.suffix['time']))
+                if self.main is not None:
+                    self.suffix['values'] = np.vstack((self.main['values'][-1,:], self.suffix['values']))
+                elif self.prefix is not None:
+                    self.suffix['values'] = np.vstack((self.prefix['values'][-1,:], self.suffix['values']))
+                else:
+                    self.suffix['values'] = np.vstack((self.fill_value, self.suffix['values']))
+
             self.suffix_duration=self.suffix['time'][-1] - self.suffix['time'][0]
-            self.interp_suffix = interp1d(self.suffix['time'],
+            self.interp_suffix = interp1d_patched(self.suffix['time'],
                                         self.suffix['values'],
                                         bounds_error=False,
                                         fill_value=(self.suffix['values'][0,:],self.suffix['values'][-1,:]),
                                         axis=0)
         else:
             self.suffix_duration=0
+            self.interp_suffix = None
 
         if not(self.prefix_duration + self.main_duration + self.suffix_duration >0):
             raise ValueError("The trajectory is empty (it is 0 seconds long)")
 
 
     def get_traj_function(self):
+        """
+        Get the trajectory function
+
+        Returns
+        -------
+        traj_function : function
+            The trajectory interpolation meta-function.
+        """
         return self.traj_function
 
 
     def traj_function(self, x0):
-        # TODO make this responsive to cases where only one or two of the trajectory segments exist
-        if x0<self.prefix_duration:
-            return self.interp_prefix(x0)
-        elif x0>(self.prefix_duration+self.main_duration):
-            return self.interp_suffix(x0)
+        """
+        The trajectory interpolation function
+
+        Parameters
+        ----------
+        x0 : Union[float, list, np.ndarray]
+
+        Returns
+        -------
+        output : np.ndarray
+            The trajectory at the given time point(s)
+
+        Raises
+        ------
+        ValueError
+            If input is not a 1D array-like object
+        RuntimeError
+            If the length of the output does not equal the length of the input
+        """
+        x0 = np.array(x0)
+        shape = x0.shape
+        if x0.ndim ==0:
+            pass
+        elif x0.ndim ==1:
+            pass
+        elif x0.ndim ==2:
+            if not np.any(shape == 1):
+                raise ValueError("Input array must be 1D, got %dD"%(x0.ndim))
         else:
-            return self.interp_main(x0)
+            raise ValueError("Input array must be 1D, got %dD"%(x0.ndim))
+
+        prefix_check = x0<self.prefix_duration
+        suffix_check = x0>(self.prefix_duration+self.main_duration)
+        main_check = np.logical_not(np.logical_or(prefix_check, suffix_check))
+
+        output = []
+        if self.interp_prefix is not None:
+            prefix_vals = self.interp_prefix(x0[prefix_check])
+            if len(output)>0:
+                output = np.vstack((output,prefix_vals))
+            else:
+                output = prefix_vals
+
+        if self.interp_main is not None:
+            main_vals = self.interp_main(x0[main_check])
+            if len(output)>0:
+                output = np.vstack((output,main_vals))
+            else:
+                prefix_vals = np.tile(self.interp_main(min(self.main['time'])),(len(x0[prefix_check]),1))
+                output = np.vstack((prefix_vals,main_vals))
+        
+        
+        if self.interp_suffix is not None:
+            suffix_vals = self.interp_suffix(x0[suffix_check])
+            if len(output)>0:
+                output = np.vstack((output,suffix_vals))
+            else:
+                prefix_vals = np.tile(self.interp_suffix(min(self.suffix['time'])),(len(x0[prefix_check]),1))
+                main_vals = np.tile(self.interp_suffix(min(self.suffix['time'])),(len(x0[main_check]),1))
+                output = np.vstack(prefix_vals, main_vals, suffix_vals)
+
+        if len(output) != len(x0):
+            raise RuntimeError("The length of the output does not equal the length of the input")
+
+        return output
+
 
     def get_final_time(self):
+        """
+        Get the final time of the trajectory
+
+        Returns
+        -------
+        final_time : float
+            The final time
+        """
         return self.prefix_duration + self.main_duration + self.suffix_duration
 
 
 class WrappedInterp1d:
+    """
+    Create a wrapping 1D interpolator
+
+    Parameters
+    ----------
+    x : dict
+        x points to use in interpolation
+    y : int, optional
+        Values to use for interpolation
+    **kwargs : optional
+        kwargs to pass to scipy.interpolate.interp1d().
+    """
     def __init__(self, x, y, **kwargs):
         self.x_min = np.min(x)
         self.x_max = np.max(x)
         self.x_diff = self.x_max - self.x_min
-        self.interp_fun = interp1d(x,y,**kwargs)
+        self.interp_fun = interp1d_patched(x,y,**kwargs)
     
     def get_function(self):
+        """
+        Get the wrapped interpolation function
+
+        Returns
+        -------
+        wrapped_interp1d : function
+            The wrapped interpolator function
+        """
         return self.wrapped_interp1d
 
     def min_wrap(self, x0):
+        """
+        Calculate wrapped x values when x is less than the wrapping bounds
+
+        Parameters
+        ----------
+        x0 : np.ndarray
+            Values of x
+
+        Returns
+        -------
+        wrapped_x0 : np.ndarray
+            Values of x wrapped.
+        """
         underflow = self.x_min-x0
         num_underflows = np.floor(underflow/self.x_diff)
         leftover = underflow - num_underflows*self.x_diff
@@ -286,6 +493,19 @@ class WrappedInterp1d:
         return x0
 
     def max_wrap(self, x0):
+        """
+        Calculate wrapped x values when x is greater than the wrapping bounds
+
+        Parameters
+        ----------
+        x0 : np.ndarray
+            Values of x
+
+        Returns
+        -------
+        wrapped_x0 : np.ndarray
+            Values of x wrapped.
+        """
         overflow = x0-self.x_max
         num_overflows = np.floor(overflow/self.x_diff)
         leftover = overflow - num_overflows*self.x_diff
@@ -293,15 +513,35 @@ class WrappedInterp1d:
         return x0
 
     def wrapped_interp1d(self, x0):
+        """
+        The wrapped interp1d function. Input x0, return interpolated cyclic values 
+
+        Parameters
+        ----------
+        x0 : Union[float, list, np.ndarray]
+            Values of x where you want to interpolate
+        
+        Returns
+        -------
+        output : np.ndarray
+            The interpolated values of y at the given time point(s)
+
+        Raises
+        ------
+        ValueError
+            If the input is not 1D
+        """
         x0 = np.array(x0)
         shape = x0.shape
-        if len(shape) ==1:
+        if x0.ndim ==0:
             pass
-        elif len(shape)==2:
+        elif x0.ndim ==1:
+            pass
+        elif x0.ndim ==2:
             if not np.any(shape == 1):
-                raise ValueError("Input array must be 1D")
+                raise ValueError("Input array must be 1D, got %dD"%(x0.ndim))
         else:
-            raise ValueError("Input array must be 1D")
+            raise ValueError("Input array must be 1D, got %dD"%(x0.ndim))
 
         min_check = x0<self.x_min
         max_check = x0>self.x_max
@@ -312,4 +552,30 @@ class WrappedInterp1d:
             
         return self.interp_fun(x0_wrapped)
         
-        
+
+def interp1d_patched(x, y, **kwargs):
+    """
+    Get a 1D interpolation function where single-length input data are handled
+
+    When the length of x and y is greater than 1, interp1d is used. When the 
+    legnth of x and y is 1, use the value of y for all values of x0.
+
+    Parameters
+    ----------
+    x0 : Union[float, list, np.ndarray]
+        Values of x where you want to interpolate
+    
+    Returns
+    -------
+    patched_interp1d : function
+        The patched interp1d function (same way the regular interp1d works)
+    """
+    x, y = map(np.asarray, (x, y ))
+    
+    def fun (x0):
+        if x.size == 1:
+            return np.tile(y,(x0.size,1))
+        else:
+            return interp1d(x, y, **kwargs)(x0)
+    
+    return fun

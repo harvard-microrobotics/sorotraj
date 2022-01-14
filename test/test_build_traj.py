@@ -48,14 +48,13 @@ def get_traj_builder(filename):
     traj_builder.load_traj_def(os.path.join(folder_to_use,filename))
     return traj_builder
 
-
+# Test trajectory bulding capabillities of several relevant trajectories
 scenarios_build = [  ('setpoint_empty_prefix', {'filename':'setpoint_traj_demo_0.yaml', 'expected_len':8}),
                ('setpoint_oneline_prefix', {'filename':'setpoint_traj_demo_1.yaml', 'expected_len':9}),
                ('setpoint_twoline_prefix', {'filename':'setpoint_traj_demo.yaml', 'expected_len':10}),
                ('interp_setpoint', {'filename':'interp_setpoint.yaml', 'expected_len':91}),
                ('waveform_traj', {'filename':'waveform_traj_demo.yaml', 'expected_len':96}),
                ]
-
 
 class TestTrajBuilder:
     scenarios = scenarios_build
@@ -73,30 +72,32 @@ class TestTrajBuilder:
         assert traj_len == expected_len
 
 
-
+# Test trajectory building errors for incorrectly defined trajectories
 scenarios_errs = [  ('duplicate_time', {'filename':'setpoint_traj_demo_err0.yaml'}),
                ('non_monotonic_time', {'filename':'setpoint_traj_demo_err1.yaml'}),
                ]
 
-
 class TestTrajBuilderErrs:
     scenarios = scenarios_errs
 
-    def test_traj_builderErrs(self, filename):
+    def test_traj_builder(self, filename):
         with pytest.raises(Exception) as e_info:
             traj_builder = get_traj_builder(filename)
             #traj = traj_builder.get_trajectory()
 
 
 
-
-scenarios_interp = [  ('setpoint_empty_prefix', {'filename':'setpoint_traj_demo_0.yaml', 'expected_time':8}),
-               ('setpoint_oneline_prefix', {'filename':'setpoint_traj_demo_1.yaml', 'expected_time':8}),
-               ('setpoint_twoline_prefix', {'filename':'setpoint_traj_demo.yaml', 'expected_time':9}),
-               ('interp_setpoint', {'filename':'interp_setpoint.yaml', 'expected_time':5}),
+# Test interpolation capabillities of several relevant trajectories
+scenarios_interp = [('setpoint_empty-prefix_empty-suffix', {'filename':'setpoint_traj_demo_2.yaml', 'expected_time':5}),
+               ('setpoint_empty-prefix', {'filename':'setpoint_traj_demo_0.yaml', 'expected_time':8 }),
+               ('setpoint_oneline-prefix', {'filename':'setpoint_traj_demo_1.yaml', 'expected_time':8 }),
+               ('setpoint_twoline-prefix', {'filename':'setpoint_traj_demo.yaml', 'expected_time':9}),
+               ('interp_no-prefix_no-suffix', {'filename':'interp_setpoint.yaml', 'expected_time':5}),
                ('waveform_traj', {'filename':'waveform_traj_demo.yaml', 'expected_time':8}),
                ]
 
+# Ignore warnings related to prefix/suffix exclusion
+@pytest.mark.filterwarnings("ignore")
 class TestInterpolator:
     scenarios = scenarios_interp
 
@@ -112,6 +113,41 @@ class TestInterpolator:
 
         assert final_time == expected_time
 
+
+# Test interpolation warning of several trajectories with missing components
+scenarios_warn = [('setpoint_empty-prefix_empty-suffix', {'filename':'setpoint_traj_demo_2.yaml'}),
+               ('setpoint_empty-prefix', {'filename':'setpoint_traj_demo_0.yaml'}),
+               ('interp_no-prefix_no-suffix', {'filename':'interp_setpoint.yaml'}),
+               ]
+
+class TestTrajBuilderWarn:
+    scenarios = scenarios_warn
+
+    def test_traj_builder(self, filename):
+        with pytest.warns(UserWarning) as e_info:
+            traj_builder = get_traj_builder(filename)
+            traj = traj_builder.get_trajectory()
+            interp = sorotraj.Interpolator(traj)
+            actuation_fn = interp.get_interp_function(
+                        num_reps=1,
+                        speed_factor=1.0,
+                        invert_direction=False)
+                        
+
+# Test interpolation error if attempting to get a list of interpolators                 
+class TestTrajInterpErrors:
+    scenarios = [('Testing deprecated inputs',{'error':DeprecationWarning})]
+    def test_interp_deprecation(self, error):
+        with pytest.raises(error) as e_info:
+            filename="setpoint_traj_demo.yaml"
+            traj_builder = get_traj_builder(filename)
+            traj = traj_builder.get_trajectory()
+            interp = sorotraj.Interpolator(traj)
+            actuation_fn = interp.get_interp_function(
+                        num_reps=1,
+                        speed_factor=1.0,
+                        invert_direction=False,
+                        as_list=True)
 
 
 #===================================================

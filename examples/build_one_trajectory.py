@@ -1,10 +1,13 @@
 import sorotraj
+import numpy as np
+import matplotlib.pyplot as plt
 
-file_to_use = 'traj_setup/setpoint_traj_demo.yaml'      # Basic demo
+#file_to_use = 'traj_setup/setpoint_traj_demo.yaml'      # Basic demo
 #file_to_use = 'traj_setup/setpoint_traj_demo_err0.yaml' # duplicate time (will throw exception)
 #file_to_use = 'traj_setup/setpoint_traj_demo_err1.yaml' # non-monotonic time (will throw exception)
 #file_to_use = 'traj_setup/setpoint_traj_demo_0.yaml'    # empty prefix
-#file_to_use = 'traj_setup/waveform_traj_demo_1.yaml'    # single prefix line
+file_to_use = 'traj_setup/setpoint_traj_demo_1.yaml'    # single line prefix
+#file_to_use = 'traj_setup/waveform_traj_demo.yaml'    # single prefix line
 
 builder = sorotraj.TrajBuilder()
 builder.load_traj_def(file_to_use)
@@ -13,7 +16,7 @@ for key in traj:
 	print(key)
 	print(traj[key])
 
-builder.plot_traj()
+#builder.plot_traj()
 
 interp = sorotraj.Interpolator(traj)
 
@@ -22,6 +25,8 @@ actuation_fn, final_time = interp.get_traj_function(
                 speed_factor=1.0,
                 invert_direction=False)
 
+
+
 #actuation_fn = interp.get_interp_function(
 #                num_reps=1,
 #                speed_factor=1.0,
@@ -29,6 +34,12 @@ actuation_fn, final_time = interp.get_traj_function(
 #final_time = interp.get_final_time()
 
 print("Final Interpolation Time: %f"%(final_time))
+
+times = np.linspace(-1,0,2000)
+vals = actuation_fn(times)
+
+plt.plot(times, vals)
+plt.show()
 
 """
 actuation_fn2 = interp.get_interp_function(
