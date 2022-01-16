@@ -18,7 +18,7 @@ for key in traj:
 	print(traj[key])
 
 # Plot the trajectory
-builder.plot_traj()
+builder.plot_traj(fig_kwargs={'figsize':(8,6),'dpi':150})
 
 # Make an interpolator from the trajectory
 interp = sorotraj.Interpolator(traj)
@@ -41,5 +41,6 @@ cycle_fn = interp.get_cycle_function(
 times = np.linspace(-1,20,2000)
 vals = actuation_fn(times)
 
+plt.figure(figsize=(8,6),dpi=150)
 plt.plot(times, vals)
 plt.show()

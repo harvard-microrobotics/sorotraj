@@ -708,9 +708,16 @@ class TrajBuilder:
 
 
     # Plot the current trajectory 
-    def plot_traj(self):
+    def plot_traj(self, fig_kwargs={}, plot_kwargs={}):
         """
         Plot the current trajectory (assuming 1 rep of the main segment)
+
+        Parameters
+        ----------
+        fig_kwargs : Any
+            Keyword args to pass to the matplotlib's figure function
+        plot_kwargs : Any
+            Keyword args to pass to the matplotlib's plotting function
 
         Raises
         ------
@@ -737,7 +744,8 @@ class TrajBuilder:
             suffix_arr[:,0] = suffix_arr[:,0] + out_traj_all[-1,0]
             out_traj_all = np.append(out_traj_all,suffix_arr,axis=0);
 
-        plt.plot(out_traj_all[:,0],out_traj_all[:,1:])
+        plt.figure(**fig_kwargs)
+        plt.plot(out_traj_all[:,0],out_traj_all[:,1:],**plot_kwargs)
         plt.xlabel("Time (s)")
         plt.ylabel("Pressure (psi)")
         plt.show()        

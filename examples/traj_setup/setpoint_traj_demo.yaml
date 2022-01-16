@@ -1,3 +1,5 @@
+# A simple waypoint trajectory with prefix and suffix
+
 # Top-level settings
 settings:
     traj_type: 'direct'  # Types include: 'waveform', 'interp', 'direct'

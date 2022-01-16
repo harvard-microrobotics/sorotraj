@@ -167,17 +167,17 @@ class Interpolator:
         if as_list is not None:
             raise DeprecationWarning('Using "as_list" to get a list of interpolation functions is no longer supported')
 
-        if self.prefix is not None:
-            prefix_dur = self.prefix['time'][-1]
+        if self.trajectory_unpacked['prefix'] is not None:
+            prefix_dur = self.trajectory_unpacked['prefix']['time'][-1]
         else:
             prefix_dur = 0.0
 
-        if self.suffix is not None:
-            suffix_dur = self.suffix['time'][-1]
+        if self.trajectory_unpacked['suffix'] is not None:
+            suffix_dur = self.trajectory_unpacked['suffix']['time'][-1]
         else:
             suffix_dur = 0.0
 
-        main_dur = self.main['time'][-1]
+        main_dur =self.trajectory_unpacked['main']['time'][-1]
         total_main_dur = main_dur/speed_factor*num_reps
 
         def cycle_fn(t):
@@ -306,7 +306,7 @@ class TrajectoryInterpolator:
         # Generate interpolation functions
         if self.main is not None:
             self.main_duration=(self.main['time'][-1])*num_reps
-            interpolator = sorotraj.WrappedInterp1d(self.main['time'],
+            interpolator = WrappedInterp1d(self.main['time'],
                                                     self.main['values'],
                                                     axis=0)
             self.interp_main = interpolator.get_function()
