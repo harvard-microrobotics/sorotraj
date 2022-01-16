@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 file_to_use = 'traj_setup/setpoint_traj_demo_1.yaml'    # single line prefix
 #file_to_use = 'traj_setup/waveform_traj_demo.yaml'    # single prefix line
 
+# Build the trajectory from the definition file
 builder = sorotraj.TrajBuilder()
 builder.load_traj_def(file_to_use)
 traj = builder.get_trajectory()
@@ -16,46 +17,29 @@ for key in traj:
 	print(key)
 	print(traj[key])
 
-#builder.plot_traj()
+# Plot the trajectory
+builder.plot_traj()
 
+# Make an interpolator from the trajectory
 interp = sorotraj.Interpolator(traj)
 
+# Get the actuation function for the specified run parameters
 actuation_fn, final_time = interp.get_traj_function(
-                num_reps=1,
+                num_reps=2,
                 speed_factor=1.0,
-                invert_direction=False)
-
-
-
-#actuation_fn = interp.get_interp_function(
-#                num_reps=1,
-#                speed_factor=1.0,
-#                invert_direction=False)
-#final_time = interp.get_final_time()
+                invert_direction=[1,3])
 
 print("Final Interpolation Time: %f"%(final_time))
 
-times = np.linspace(-1,0,2000)
+# Get the cycle function for the specified run parameters
+cycle_fn = interp.get_cycle_function(
+                num_reps=2,
+                speed_factor=1.0,
+                invert_direction=[1,3])
+
+# Plot the actuation function vs. time
+times = np.linspace(-1,20,2000)
 vals = actuation_fn(times)
 
 plt.plot(times, vals)
 plt.show()
-
-"""
-actuation_fn2 = interp.get_interp_function(
-                num_reps=1,
-                speed_factor=1.0,
-                invert_direction=[1,3])
-
-cycle_fn = interp.get_cycle_function(
-                num_reps=1,
-                speed_factor=1.0,
-                invert_direction=[1,3])
-
-print("Interpolation at 2.155")
-print(actuation_fn(4))
-print(actuation_fn2(4))
-print(actuation_fn(2.155))
-print(actuation_fn2(2.155))
-print(cycle_fn([0.5, 2.0, 7.0]))
-"""

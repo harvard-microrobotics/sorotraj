@@ -35,7 +35,7 @@ print(conversion_fun(traj_line_test))
 traj = sorotraj.TrajBuilder()
 for file in files_to_use:
     traj.load_traj_def(os.path.join(setup_location,file))
-    traj.convert(conversion_fun)
+    traj.convert_traj(conversion_fun)
     traj.save_traj(os.path.join(build_location,file+'_convert'))
 
 # Convert the definitions if possible
