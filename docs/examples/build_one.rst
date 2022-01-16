@@ -51,12 +51,43 @@ Now that we have the trajectory (``traj``), let's plot it:
 
     builder.plot_traj()
 
+.. image:: ../img/example_traj.png
+    :alt: Graph of trajectory
+
 
 
 Trajectory Interpolator
 -----------------------
 
-Now we want to create an interpolator so we can have a convenient way to get trajectory values given arbitrary values of time.
+Now we want to create an interpolator so we can have a convenient way to get trajectory values given arbitrary values of time. We do this with an ``Interpolator`` object. Here, we want to get an interpolator function that loops the ``main`` trajectory component 2 times, with a speed factor of 1.0 (times as defined in the definition), and invert signals 1 and 3 (these are indices).
+
+.. code-block:: python
+
+    interp = sorotraj.Interpolator(traj)
+
+    # Get the actuation function for the specified run parameters
+    actuation_fn, final_time = interp.get_traj_function(
+                    num_reps=2,
+                    speed_factor=1.0,
+                    invert_direction=[1,3])
+
+ 
+Now that we have an interpolation function we can input a time (or vector of times) and obtain the trajectory at arbirary times. This function is useful when performing simulations of soft systems.
+
+In this example, we go from -1 (before the start of the trajectory) to 20 sec. (well beyond the end of the trajectory).
+
+.. code-block:: python
+
+    times = np.linspace(-1,20,2000)
+    vals = actuation_fn(times)
+
+    plt.figure(figsize=(8,6),dpi=150)
+    plt.plot(times, vals)
+    plt.show()
+
+
+.. image:: ../img/example_traj_interpolated.png
+    :alt: Graph of trajectory
 
 
 Full Code
