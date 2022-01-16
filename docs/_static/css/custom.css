@@ -26,6 +26,14 @@ a:hover{
     color: #bf2a00;
 }
 
+.fa-primary{
+    color: #bf2a00;
+}
+
+.fa-link{
+    color: #bf2a00;
+}
+
 .wy-nav-side{
     background: #ececec;
     border-right-color: #dddddd;
