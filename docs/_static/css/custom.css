@@ -1,0 +1,68 @@
+/** css/custom.css **/
+
+/* This line is theme specific - it includes the base theme CSS */
+/*@import 'theme.css';       /* for the Read the Docs theme */
+
+body {
+    /* ... */
+}
+
+a, a:hover, a:visited{
+    color:#bf2a00;
+}
+a:hover{
+    text-decoration: underline;
+}
+
+.wy-nav-top{
+    color: #bf2a00;
+    background: #dddddd;
+}
+.wy-nav-top a{
+    color: #bf2a00;
+}
+
+.caption-text{
+    color: #bf2a00;
+}
+
+.wy-nav-side{
+    background: #ececec;
+    border-right-color: #dddddd;
+    border-right-style: solid;
+    border-right-width: 1px;
+    box-shadow: 0 0 8px 2px #0000001f;
+}
+
+.wy-menu-vertical a{
+    color: #000;
+}
+
+.wy-menu-vertical li.toctree-l1.current>a{
+    background-color: #c9c9c9;
+    border: none;
+
+}
+
+.wy-menu-vertical a:hover, .wy-menu-vertical a:active{
+    background-color:#d6d6d6;
+    color: #000;
+}
+
+.wy-menu-vertical a:hover span.toctree-expand{
+    color: #000;
+}
+
+.wy-nav-content-wrap {
+    background: #fcfcfc;
+}
+
+.wy-nav-content{
+    background: #fcfcfc;
+}
+
+/*
+.wy-menu-vertical li.toctree-l2.current>a, .wy-menu-vertical li.toctree-l2.current li.toctree-l3>a{
+    background: none;
+}
+*/

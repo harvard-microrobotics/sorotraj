@@ -1,7 +1,7 @@
 
 Sorotraj allows you to generate trajectory functions to control soft robots.
 Trajectories are defined in a simple, human-readable yaml file, and are designed
-for compatibillity with both with `Ctrl-P pressure controllers <https://github.com/cbteeple/ctrlp>`_ (for real-world soft robots)
+for compatibillity with both `Ctrl-P pressure controllers <https://github.com/cbteeple/ctrlp>`_ (for real-world soft robots)
 and `SoMo simulations <https://github.com/GrauleM/somo>`_ (for virtual soft robots). 
 
 
