@@ -1,5 +1,5 @@
 # sorotraj
-Generate trajectories for soft robots from yaml files (accompanies the [Ctrl-P project](https://cbteeple.github.io/pressure_controller_docs))
+Generate trajectories for soft robots from yaml files (accompanies the [Ctrl-P project](http://ctrl-p.cbteeple.com/) and [SoMo simulation framework](https://github.com/GrauleM/somo))
 
 ## Installation
 ### Install the release version
