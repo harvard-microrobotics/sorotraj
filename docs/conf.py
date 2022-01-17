@@ -104,6 +104,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 #
 html_theme = "sphinx_rtd_theme"
 
+html_favicon = 'img/favicon.ico'
 html_logo = "img/logo.png"
 html_theme_options = {
     "logo_only": True,
