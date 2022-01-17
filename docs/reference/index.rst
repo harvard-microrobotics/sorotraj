@@ -1,5 +1,5 @@
 ===============
-Class Reference
+API Reference
 ===============
 
 Each page contains details and full API reference for all the classes in sorotraj.
