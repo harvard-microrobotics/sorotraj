@@ -16,7 +16,7 @@ a:hover{
 
 .wy-nav-top{
     color: #bf2a00;
-    background: #dddddd;
+    background: #dddddd !important;
 }
 .wy-nav-top a{
     color: #bf2a00;
@@ -54,6 +54,10 @@ a:hover{
 
 .wy-menu-vertical a:hover, .wy-menu-vertical a:active{
     background-color:#d6d6d6;
+    color: #000;
+}
+
+.wy-menu-vertical a:hover button.toctree-expand{
     color: #000;
 }
 
