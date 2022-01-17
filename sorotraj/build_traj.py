@@ -29,11 +29,14 @@ class TrajBuilder:
     ... out_file = 'examples/traj_built/setpoint_traj_demo.traj'
     ... builder.save_traj(out_file)
     """
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, **kwargs):
         self.filename = None
         self.definition = None
         self.full_trajectory = None
         self.verbose=verbose
+
+        if kwargs.get('graph', None) is not None:
+            raise DeprecationWarning('Passing "graph" to the trajectory builder is no longer supported. Use TrajBuilder.plot_traj() function instead')
 
 
     def load_traj_def(self, filename):

@@ -373,7 +373,9 @@ class TrajectoryInterpolator:
         Returns
         -------
         output : np.ndarray
-            The trajectory at the given time point(s)
+            The trajectory at the given time point(s). If ``x0`` is a float,
+            output is a 1D np.ndarray. If ``x0`` is a list or np.ndarray, output
+            is a 2D np.ndarray.
 
         Raises
         ------
@@ -424,8 +426,18 @@ class TrajectoryInterpolator:
                 main_vals = np.tile(self.interp_suffix(min(self.suffix['time'])),(len(x0[main_check]),1))
                 output = np.vstack(prefix_vals, main_vals, suffix_vals)
 
-        if len(output) != len(x0):
+        # Check the shape of the output against the input shape
+        if x0.ndim ==0:
+            num_rows_x0 = 1
+        else:
+            num_rows_x0 =  x0.shape[0]
+
+        if output.shape[0] != num_rows_x0:
             raise RuntimeError("The length of the output does not equal the length of the input")
+
+        # Return a 1D array if the array is 1xN
+        if output.shape[0] ==1:
+            output=np.squeeze(output)
 
         return output
 
