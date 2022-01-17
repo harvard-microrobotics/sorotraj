@@ -457,7 +457,7 @@ class TrajBuilder:
         ValueError
             If the interpolation type is invalid
         """
-        interp_type = str(self.config.get("interp_type"))
+        interp_type = str(self.config.get("interp_type", "none"))
         if interp_type == "none":
             return self._do_direct()
 
