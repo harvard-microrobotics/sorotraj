@@ -70,7 +70,7 @@ class Interpolator:
             self.trajectory_unpacked[key] = curr_unpacked
         
 
-    def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, as_list=None):
+    def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, **kwargs):
         """
         Get a trajectory interpolation function with the specified parameters
 
@@ -104,10 +104,12 @@ class Interpolator:
         if speed_factor<=0:
             raise ValueError("The speed factor must be strictly greater than 0")
 
-        if as_list is not None:
+        if kwargs.get('as_list', None) is not None:
             raise DeprecationWarning('Using "as_list" to get a list of interpolation functions is no longer supported')
 
-        interp_fun, final_time = self.get_traj_function(num_reps=1, speed_factor = 1.0, invert_direction=False)
+        interp_fun, final_time = self.get_traj_function(num_reps=num_reps,
+        												speed_factor = speed_factor,
+        												invert_direction=invert_direction)
         self.interp_fun = interp_fun
         self.final_time = final_time
         return self.interp_fun
