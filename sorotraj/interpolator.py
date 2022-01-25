@@ -426,7 +426,7 @@ class TrajectoryInterpolator:
             else:
                 prefix_vals = np.tile(self.interp_suffix(min(self.suffix['time'])),(len(x0[prefix_check]),1))
                 main_vals = np.tile(self.interp_suffix(min(self.suffix['time'])),(len(x0[main_check]),1))
-                output = np.vstack(prefix_vals, main_vals, suffix_vals)
+                output = np.vstack((prefix_vals, main_vals, suffix_vals))
 
         # Check the shape of the output against the input shape
         if x0.ndim ==0:
