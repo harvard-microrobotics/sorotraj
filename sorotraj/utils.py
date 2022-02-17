@@ -1,9 +1,7 @@
 import yaml
 import os
 
-from typing import Any
-
-def save_yaml(data: Any, filename: str):
+def save_yaml(data, filename):
     """
     Save data to a yaml file.
 
@@ -31,7 +29,7 @@ def save_yaml(data: Any, filename: str):
         yaml.dump(data, f, default_flow_style=None)
 
 
-def load_yaml(filename: str):
+def load_yaml(filename):
     """
     Load data from a yaml file.
 
