@@ -743,7 +743,8 @@ class TrajBuilder:
 
     def get_flattened_trajectory(self, num_reps=1, speed_factor = 1.0, invert_direction=False, **kwargs):
         """
-        Get a flattened trajectory (simple list of waypoints)
+        Get a flattened trajectory (simple list of waypoints) from start to finish
+        including prefix, main, and suffix segments.
 
         Parameters
         ----------
@@ -759,8 +760,10 @@ class TrajBuilder:
 
         Returns
         -------
-        times : list
-            A list of key time points in the trajectory
+        trajectory : list of lists
+            A simple list of waypoints for the trajectory from start to finish.
+            *Each point is represented in the form * ``[time, s0, s1, ..., sn]``,
+            where s0-n are signals.
         """
 
         times = self.get_absolute_times(num_reps, speed_factor, **kwargs)
