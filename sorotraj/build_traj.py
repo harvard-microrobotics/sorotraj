@@ -584,7 +584,6 @@ class TrajBuilder:
         RuntimeError
             If the trajectory has not been built
         """
-
         if self.full_trajectory is None:
             raise RuntimeError("Trajectory has not been built.")
         
@@ -657,6 +656,133 @@ class TrajBuilder:
 
         self.definition = def_new
         self.build_traj()
+
+
+    def get_absolute_times(self, num_reps=1, speed_factor = 1.0, merge_duplicates=False, offset_tol=0.001):
+        """
+        Get a list of relevant time points starting from t=0 at the beginning of the prefix
+
+        Parameters
+        ----------
+        num_reps : int
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float
+            Speed multiplier (times are multiplied by inverse of this)
+        merge_duplicates : bool
+            Merge duplicate times (rather than applying a tiny offset)
+        offset_tol : float
+            The tolerance to use when fixing duplicate points. *This should be set to something
+            very small relative to the timescales you are working with.*
+
+        Returns
+        -------
+        times : list
+            A list of key time points in the trajectory
+
+        Raises
+        ------
+        RuntimeError
+            If the trajectory has not been built
+        ValueError
+            If num_reps is less than 0, or if speed_factor is 0 or less
+        """
+        if self.full_trajectory is None:
+            raise RuntimeError("Trajectory has not been built.")
+
+        num_reps=int(num_reps)
+        if num_reps<0:
+            raise ValueError("The number of reps must be at least 0")
+
+        if speed_factor<=0:
+            raise ValueError("The speed factor must be strictly greater than 0")
+
+        setpoints = self.full_trajectory['setpoints']
+        prefix = self.full_trajectory['prefix']
+        suffix = self.full_trajectory['suffix']
+
+
+        # Incorperate the prefix
+        times_abs = []
+        last_time = 0
+        if prefix is not None:
+            out_traj_all = np.asarray(prefix)
+            times = out_traj_all[:,0] - out_traj_all[0,0]
+            times_abs.extend(times)
+            last_time = times[-1]
+
+        # Incorperate the main looping part
+        if setpoints is not None:
+            out_traj_all = np.asarray(setpoints)
+            times = out_traj_all[:,0]/speed_factor
+            for rep in range(num_reps):
+                times = times + last_time
+                times_abs.extend(times.tolist())
+                last_time = times[-1]
+
+        # Incorperate the suffix
+        if suffix is not None:
+            out_traj_all = np.asarray(suffix)
+            times = out_traj_all[:,0] + last_time
+            times_abs.extend(times)
+            last_time = times[-1]
+
+
+        # Fix duplicate times
+        if merge_duplicates:
+            times_fixed=list(set(times_abs))
+        else:
+            times_fixed = np.array(times_abs)
+            for time in times_abs:
+                search = np.where(times_fixed == time)[0]
+                if len(search) >1:
+                    times_fixed[search[1:]] = time+offset_tol
+            times_fixed = times_fixed.tolist()
+
+        return times_fixed
+
+
+    def get_flattened_trajectory(self, num_reps=1, speed_factor = 1.0, invert_direction=False, **kwargs):
+        """
+        Get a flattened trajectory (simple list of waypoints)
+
+        Parameters
+        ----------
+        num_reps : int
+            Number of times to repeat the "main" trajectory segment
+        speed_factor : float
+            Speed multiplier (times are multiplied by inverse of this)
+        invert_direction : Union[bool, list]
+            Invert the sign of the interpolated values. If True, all signs are
+            flipped. If list, invert_direction is treated as a list of indices.
+        **kwargs : (Multiple)
+            Arguments to pass to the ``get_absolute_times()`` function
+
+        Returns
+        -------
+        times : list
+            A list of key time points in the trajectory
+        """
+
+        times = self.get_absolute_times(num_reps, speed_factor, **kwargs)
+        times = np.array(times)
+
+        # Make an interpolator from the trajectory
+        interp = sorotraj.Interpolator(self.full_trajectory)
+
+        # Get the actuation function for the specified run parameters
+        actuation_fn, final_time = interp.get_traj_function(
+                        num_reps=num_reps,
+                        speed_factor=speed_factor,
+                        invert_direction=invert_direction)
+        values = actuation_fn(times)
+
+        times2d = np.reshape(times, (len(times),1))
+        pts = np.hstack((times2d,values))
+
+        return pts.tolist()
+
+
+
 
 
     def get_traj_components(self):

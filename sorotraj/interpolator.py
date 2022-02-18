@@ -286,6 +286,7 @@ class TrajectoryInterpolator:
 
         self._generate_interp_functions(num_reps, speed_factor)
 
+
     def _generate_interp_functions(self, num_reps, speed_factor):
         """
         Generate nessecary interpolator functions
@@ -307,6 +308,7 @@ class TrajectoryInterpolator:
         """
         # Generate interpolation functions
         if self.main is not None:
+            self.main['time'] = self.main['time']/speed_factor
             self.main_duration=(self.main['time'][-1])*num_reps
             interpolator = WrappedInterp1d(self.main['time'],
                                                     self.main['values'],

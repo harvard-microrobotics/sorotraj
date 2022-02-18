@@ -44,3 +44,13 @@ vals = actuation_fn(times)
 plt.figure(figsize=(8,6),dpi=150)
 plt.plot(times, vals)
 plt.show()
+
+abs_times = builder.get_absolute_times(num_reps=2, speed_factor=1.0)
+abs_vals  = actuation_fn(abs_times)
+
+print("Times")
+print(abs_times)
+
+traj_flat = builder.get_flattened_trajectory(num_reps=2, speed_factor=1.0, invert_direction=[1,3])
+
+print(traj_flat)
