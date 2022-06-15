@@ -411,7 +411,6 @@ class TrajBuilder:
         out_times = np.vstack(time_samp)
         traj_arr = np.reshape(np.array(traj),(1,len(traj)))
         press_amp_arr = np.reshape(np.array(press_amp),(1,len(press_amp)))
-        print(traj_arr.shape)
 
         out_traj  = np.matmul(traj_arr.T,press_amp_arr)
         press_off_all=np.tile(press_off,(len(traj),1))
