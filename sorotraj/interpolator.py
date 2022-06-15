@@ -67,7 +67,7 @@ class Interpolator:
                                     'max_time': np.max(curr_data[:,0]),
                                     'min_time': np.min(curr_data[:,0]) }
                 
-            self.trajectory_unpacked[key] = curr_unpacked
+            self.trajectory_unpacked[key] = copy.deepcopy(curr_unpacked)
         
 
     def get_interp_function(self, num_reps=1, speed_factor = 1.0, invert_direction=False, **kwargs):
@@ -276,13 +276,21 @@ class TrajectoryInterpolator:
 
         # Invert values
         if isinstance(invert_direction,list):
-            self.main['values'][:,invert_direction] = -self.main['values'][:,invert_direction]
-            self.prefix['values'][:,invert_direction] = -self.prefix['values'][:,invert_direction]
-            self.suffix['values'][:,invert_direction] = -self.suffix['values'][:,invert_direction]
+            if self.main is not None:
+                self.main['values'][:,invert_direction] = -self.main['values'][:,invert_direction]
+            
+            if self.prefix is not None:
+                self.prefix['values'][:,invert_direction] = -self.prefix['values'][:,invert_direction]
+            
+            if self.suffix is not None:
+                self.suffix['values'][:,invert_direction] = -self.suffix['values'][:,invert_direction]
         elif invert_direction == True:
-            self.main['values'] = -self.main['values']
-            self.prefix['values'] = -self.prefix['values']
-            self.suffix['values'] = -self.suffix['values']
+            if self.main is not None:
+                self.main['values'] = -self.main['values']
+            if self.prefix is not None:
+                self.prefix['values'] = -self.prefix['values']
+            if self.suffix is not None:
+                self.suffix['values'] = -self.suffix['values']
 
         self._generate_interp_functions(num_reps, speed_factor)
 
@@ -307,6 +315,7 @@ class TrajectoryInterpolator:
             If the trajectory is 0 seconds long
         """
         # Generate interpolation functions
+        self.segment_times = {}
         if self.main is not None:
             self.main['time'] = self.main['time']/speed_factor
             self.main_duration=(self.main['time'][-1])*num_reps
@@ -314,9 +323,11 @@ class TrajectoryInterpolator:
                                                     self.main['values'],
                                                     axis=0)
             self.interp_main = interpolator.get_function()
+            self.segment_times['main'] = {'max':self.main['max_time'],'min':self.main['min_time']}
         else:
             self.main_duration=0
             self.interp_main = None
+            self.segment_times['main'] = {'max':0.0,'min':0.0}
     
         if self.prefix is not None:
             self.prefix_duration=self.prefix['time'][-1] - self.prefix['time'][0]
@@ -325,9 +336,22 @@ class TrajectoryInterpolator:
                                       bounds_error=False,
                                       fill_value=(self.prefix['values'][0,:],self.prefix['values'][-1,:]),
                                       axis=0)
+            self.segment_times['prefix'] = {'max':self.prefix['max_time'],'min':self.prefix['min_time']}
         else:
             self.prefix_duration=0
-            self.interp_prefix = None
+            prefix={}
+            prefix['time'] = np.array([0])
+
+            if self.main is not None:
+                prefix['values'] = self.main['values'][0,:]
+            elif self.suffix is not None:
+                prefix['values'] = self.suffix['values'][0,:]
+            else:
+                prefix['values'] = self.fill_value
+
+            self.interp_prefix = constant_value(prefix['values']) 
+
+            self.segment_times['prefix'] = {'max':0.0,'min':0.0}
         
         if self.suffix is not None:
             # Insert last waypoint before suffix into time 0 in the suffix
@@ -346,9 +370,22 @@ class TrajectoryInterpolator:
                                         bounds_error=False,
                                         fill_value=(self.suffix['values'][0,:],self.suffix['values'][-1,:]),
                                         axis=0)
+            self.segment_times['suffix'] = {'max':self.suffix['max_time'],'min':self.suffix['min_time']}
         else:
             self.suffix_duration=0
-            self.interp_suffix = None
+
+            suffix={}
+            suffix['time'] = np.array([0])
+
+            if self.main is not None:
+                suffix['values'] = self.main['values'][-1,:]
+            elif self.prefix is not None:
+                suffix['values'] = self.prefix['values'][-1,:]
+            else:
+                suffix['values'] = self.fill_value
+
+            self.interp_suffix = constant_value(suffix['values'])            
+            self.segment_times['suffix'] = {'max':1.0,'min':0.0}
 
         if not(self.prefix_duration + self.main_duration + self.suffix_duration >0):
             raise ValueError("The trajectory is empty (it is 0 seconds long)")
@@ -366,7 +403,7 @@ class TrajectoryInterpolator:
         return self.traj_function
 
 
-    def traj_function(self, x0):
+    def traj_function(self, x0, debug=False):
         """
         The trajectory interpolation function
 
@@ -404,6 +441,9 @@ class TrajectoryInterpolator:
         suffix_check = x0>(self.prefix_duration+self.main_duration)
         main_check = np.logical_not(np.logical_or(prefix_check, suffix_check))
 
+        if self.interp_prefix is None:
+            main_check  = main_check + prefix_check
+
         output = []
         if self.interp_prefix is not None:
             prefix_vals = self.interp_prefix(x0[prefix_check])
@@ -413,7 +453,7 @@ class TrajectoryInterpolator:
                 output = prefix_vals
 
         if self.interp_main is not None:
-            main_vals = self.interp_main(x0[main_check])
+            main_vals = self.interp_main(x0[main_check]-self.segment_times['prefix']['max'])
             if len(output)>0:
                 output = np.vstack((output,main_vals))
             else:
@@ -422,7 +462,7 @@ class TrajectoryInterpolator:
         
         
         if self.interp_suffix is not None:
-            suffix_vals = self.interp_suffix(x0[suffix_check])
+            suffix_vals = self.interp_suffix(x0[suffix_check]-self.segment_times['prefix']['max']-self.segment_times['main']['max'])
             if len(output)>0:
                 output = np.vstack((output,suffix_vals))
             else:
@@ -568,6 +608,14 @@ class WrappedInterp1d:
             
         return self.interp_fun(x0_wrapped)
         
+
+def constant_value(y):
+
+    def fun(x0):
+        return np.tile(y,(x0.size,1))
+
+    return fun
+
 
 def interp1d_patched(x, y, **kwargs):
     """
